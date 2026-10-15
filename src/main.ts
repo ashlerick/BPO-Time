@@ -1,20 +1,16 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
 import * as path from "path";
 import * as zlib from "zlib";
+import { registerAppBar, removeAppBar, setAppBarWidth } from "./appbar";
 
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
-// The portal's "Open app" button links to bpotime://open. Windows is told about this link type the
-// first time the app runs (and by the installer, later), so the browser can start or focus the app.
-const PROTOCOL = "bpotime";
-// Only these actions are honoured. A link is text from any web page: it must never be able to make
-// the app open files, run commands or visit addresses, so nothing in it is used except the action name.
-const LINK_ACTIONS = new Set(["open"]);
-const WIDTH = 300;
+const WIDTH = 300; // DIPs
 const COLLAPSED_WIDTH = 56;
-const START_HEIGHT = 560; // replaced by the page as soon as it knows its real height
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let collapsed = false;
+let hwnd = 0;
 
 function crc32(buf: Buffer): number {
   let c = ~0;
@@ -53,21 +49,26 @@ function trayIcon(): Electron.NativeImage {
   return nativeImage.createFromBuffer(png);
 }
 
-function placeAtEdge(): void {
+// Reserve the right edge of the primary monitor and size the window to it. The AppBar API works in
+// physical pixels, Electron in DIPs, so convert both ways.
+function dock(): void {
   if (!win) return;
-  const area = screen.getPrimaryDisplay().workArea;
-  const height = Math.min(START_HEIGHT, area.height);
-  win.setBounds({ x: area.x + area.width - WIDTH, y: area.y + 40, width: WIDTH, height });
+  const display = screen.getPrimaryDisplay();
+  const monitor = screen.dipToScreenRect(null, display.bounds);
+  const width = Math.round((collapsed ? COLLAPSED_WIDTH : WIDTH) * display.scaleFactor);
+  const rc = setAppBarWidth(hwnd, {
+    left: monitor.x,
+    top: monitor.y,
+    right: monitor.x + monitor.width,
+    bottom: monitor.y + monitor.height,
+  }, width);
+  win.setBounds(
+    screen.screenToDipRect(null, { x: rc.left, y: rc.top, width: rc.right - rc.left, height: rc.bottom - rc.top })
+  );
 }
 
-// Resize in place, keeping the right edge where the user dragged it.
-function setCollapsed(collapsed: boolean): void {
-  if (!win) return;
-  const b = win.getBounds();
-  const area = screen.getDisplayMatching(b).workArea;
-  const width = collapsed ? COLLAPSED_WIDTH : WIDTH;
-  const x = b.x + b.width - width;
-  win.setBounds({ x, y: b.y, width, height: b.height });
+function quit(): void {
+  app.quit();
 }
 
 function createWindow(): void {
@@ -75,8 +76,9 @@ function createWindow(): void {
     width: WIDTH,
     frame: false,
     resizable: false,
+    movable: false,
     alwaysOnTop: true,
-    skipTaskbar: false,
+    skipTaskbar: true,
     backgroundColor: "#1a212b",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -84,90 +86,39 @@ function createWindow(): void {
       nodeIntegration: false,
     },
   });
-  placeAtEdge();
+  hwnd = Number(win.getNativeWindowHandle().readBigUInt64LE(0));
+  registerAppBar(hwnd);
+  dock();
   win.loadFile(path.join(__dirname, "..", "mockup", "index.html"), { query: { app: "1" } });
-  win.on("close", (e) => {
-    // Closing hides to the tray; quit from the tray menu.
-    if (!quitting) {
-      e.preventDefault();
-      win?.hide();
-    }
-  });
-}
-
-let quitting = false;
-
-function showPanel(): void {
-  if (!win) return;
-  if (win.isMinimized()) win.restore();
-  win.show();
-  win.focus();
-}
-
-// Handles bpotime://<action>. Anything that is not exactly a known action is ignored.
-function handleLink(raw: string | undefined): void {
-  if (!raw) return;
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return;
-  }
-  if (url.protocol !== `${PROTOCOL}:`) return;
-  if (!LINK_ACTIONS.has(url.hostname)) return;
-  showPanel();
-}
-
-function registerProtocol(): void {
-  if (process.defaultApp && process.argv.length >= 2) {
-    // Running from source (`electron .`): Windows has to be told how to start us.
-    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
-  } else {
-    app.setAsDefaultProtocolClient(PROTOCOL);
-  }
-}
-
-// One panel only. A second launch (including one from a bpotime:// link) hands over to the first.
-if (!app.requestSingleInstanceLock()) {
-  app.quit();
-} else {
-  app.on("second-instance", (_e, argv) => {
-    showPanel();
-    handleLink(argv.find((a) => a.startsWith(`${PROTOCOL}://`)));
-  });
 }
 
 app.whenReady().then(() => {
-  registerProtocol();
   createWindow();
-  // Started from a link while not running yet: the link is in our own arguments.
-  handleLink(process.argv.find((a) => a.startsWith(`${PROTOCOL}://`)));
 
   tray = new Tray(trayIcon());
   tray.setToolTip("BPO Time");
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: "Show panel", click: () => win?.show() },
       { label: "Open portal", click: () => shell.openExternal(PORTAL_URL) },
       { type: "separator" },
-      { label: "Quit BPO Time", click: () => { quitting = true; app.quit(); } },
+      { label: "Quit BPO Time", click: quit },
     ])
   );
-  tray.on("click", () => (win?.isVisible() ? win.hide() : win?.show()));
 
-  ipcMain.on("panel:collapsed", (_e, collapsed: boolean) => setCollapsed(collapsed));
-  // The page reports its content height so the window always fits it exactly, with no scrollbar.
-  ipcMain.on("panel:height", (_e, height: number) => {
-    if (!win || !Number.isFinite(height) || height < 40) return;
-    const b = win.getBounds();
-    const area = screen.getDisplayMatching(b).workArea;
-    const h = Math.min(Math.round(height), area.height);
-    const y = Math.min(b.y, area.y + area.height - h);
-    win.setBounds({ x: b.x, y, width: b.width, height: h });
+  ipcMain.on("panel:collapsed", (_e, value: boolean) => {
+    collapsed = value;
+    dock();
   });
-  ipcMain.on("panel:minimize", () => win?.minimize());
   ipcMain.on("portal:open", () => shell.openExternal(PORTAL_URL));
-  ipcMain.on("app:quit", () => { quitting = true; app.quit(); });
+  ipcMain.on("app:quit", quit);
+
+  // Monitor plugged in, resolution or scale changed: take the edge again.
+  screen.on("display-metrics-changed", dock);
 });
 
-app.on("window-all-closed", () => {});
+// Give the screen space back to Windows when we exit, otherwise it stays reserved until sign-out.
+app.on("before-quit", () => {
+  if (hwnd) removeAppBar(hwnd);
+});
+
+app.on("window-all-closed", () => app.quit());
