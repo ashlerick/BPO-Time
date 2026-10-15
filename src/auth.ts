@@ -83,6 +83,29 @@ async function messageOf(res: Response, fallback: string): Promise<string> {
   }
 }
 
+export type ApiResult = { kind: "ok"; status: number; body: any } | { kind: "error"; status: number; message: string } | { kind: "offline" };
+
+/**
+ * Call a device endpoint with this PC's token. A 401 means the portal has disconnected this PC
+ * (revoked, or account deactivated): drop the token and go back to "Connect your account".
+ */
+export async function api(pathname: string, method: "GET" | "POST"): Promise<ApiResult> {
+  if (!token) return { kind: "error", status: 401, message: "This PC is not connected. Press Launch App in the portal." };
+  try {
+    const res = await call(pathname, { method, headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 401) {
+      const message = await messageOf(res, "This PC is no longer connected. Press Launch App in the portal to connect again.");
+      clearToken();
+      set({ status: "signedOut", message });
+      return { kind: "error", status: 401, message };
+    }
+    if (!res.ok) return { kind: "error", status: res.status, message: await messageOf(res, "The portal could not do that. Try again in a moment.") };
+    return { kind: "ok", status: res.status, body: await res.json() };
+  } catch {
+    return { kind: "offline" };
+  }
+}
+
 /** On startup: sign back in with the stored token. Offline is a normal state, not a sign-out. */
 export async function restore(): Promise<void> {
   token = loadToken();

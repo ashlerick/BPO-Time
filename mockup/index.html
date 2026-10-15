@@ -56,6 +56,10 @@
   button.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; padding: 11px; }
   button.danger { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 600; padding: 11px; }
   button.active { background: var(--warn); border-color: var(--warn); color: #fff; }
+  .zones { display: flex; justify-content: space-between; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+  .zones > div { display: flex; flex-direction: column; }
+  .zlabel { font-size: 10px; letter-spacing: .05em; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+  .ztime { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .notice { border: 1px solid var(--line); border-left: 3px solid var(--brand); border-radius: 8px; padding: 10px 12px; font-size: 13px; background: var(--bg); }
   .notice b { display: block; margin-bottom: 4px; }
   .notice .btn { margin-top: 8px; width: 100%; }
@@ -119,6 +123,11 @@
       </div>
       <button class="iconbtn" id="minimize" title="Minimize (send behind your apps)">&#8211;</button>
     </div>
+    <div class="zones">
+      <div><span class="zlabel">PH &middot; <span id="phDay"></span></span><span class="ztime" id="phTime"></span></div>
+      <div><span class="zlabel">CA &middot; <span id="caDay"></span></span><span class="ztime" id="caTime"></span></div>
+    </div>
+
     <div class="body">
       <div class="notice" id="notice" hidden></div>
       <div class="clock">
@@ -177,7 +186,19 @@
 
   // Sign-in state. In a plain browser (design preview) it stays "signed in" with the demo name.
   const auth = { signedIn: true, name: 'Juan Dela Cruz' };
-  const initials = n => n.split(/s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+  const initials = n => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+
+  // PH and CA clocks, same as the portal header. Display only: hours are always counted on the server.
+  const ZONES = [['ph', 'PH', 'Asia/Manila'], ['ca', 'CA', 'America/Los_Angeles']];
+  function paintClocks() {
+    const now = new Date();
+    for (const [id, , tz] of ZONES) {
+      const day = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric' }).format(now);
+      const time = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(now);
+      $(id + 'Day').textContent = day.replace(',', ' ·').toUpperCase();
+      $(id + 'Time').textContent = time;
+    }
+  }
 
   function applyAuth(a) {
     const notice = $('notice');
@@ -208,19 +229,47 @@
   function render() {
     const eff = s.idle && s.state === 'in' ? 'idle' : s.state;
     const label = { out: 'Not clocked in', in: 'Clocked in', idle: 'Idle - timer paused' }[eff];
-    $('statusText').textContent = label;
+    $('statusText').textContent = s.att && s.att.checkedOut ? 'Clocked out' : label;
     for (const id of ['dot']) $(id).style.background = COLORS[eff];
     $('today').textContent = hms(s.workedMs);
-    $('week').textContent = hm(s.weekBaseMs + s.workedMs);
+    $('week').textContent = live ? '--:--' : hm(s.weekBaseMs + s.workedMs);
     // Clock in is a button. Clock out is a slider, so it cannot be pressed by accident.
+    const done = !!(s.att && s.att.checkedOut);
     $('clock').hidden = s.state === 'in';
     $('slide').hidden = s.state !== 'in' || !auth.signedIn;
-    $('clock').disabled = !auth.signedIn;
+    $('clock').textContent = done ? 'Clocked out for today' : 'Clock in';
+    $('clock').disabled = !auth.signedIn || done || (live && !s.att);
     $('syncDot').style.background = s.offline ? 'var(--warn)' : 'var(--ok)';
     $('syncText').textContent = s.offline ? 'Offline - ' + s.queued + ' block(s) queued' : 'Synced';
   }
 
+  // Real attendance from the portal (app only). The server's clock is the reference: its time at the
+  // moment of the reply, plus however long ago we received it, so a wrong PC clock cannot change hours.
+  const live = !!window.bpoTime;
+  function applyAttendance(a) {
+    s.att = a ? Object.assign({}, a, { receivedAt: Date.now() }) : null;
+    syncFromAttendance();
+    render();
+  }
+  function syncFromAttendance() {
+    const a = s.att;
+    if (!live || !a) { if (live) { s.state = 'out'; s.workedMs = 0; } return; }
+    const serverNow = new Date(a.serverNow).getTime() + (Date.now() - a.receivedAt);
+    s.state = a.checkedIn && !a.checkedOut ? 'in' : 'out';
+    if (!a.checkedIn) { s.workedMs = 0; return; }
+    const end = a.checkedOut ? new Date(a.checkOutAt).getTime() : serverNow;
+    s.workedMs = Math.max(0, end - new Date(a.checkInAt).getTime());
+    // Shifts and the portal's attendance are on PH (Manila) time, whatever this PC's clock zone is.
+    const fmt = iso => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' }) + ' PH';
+    const t = fmt(a.checkInAt);
+    $('shift').firstChild.textContent = 'Clocked in at ' + t;
+    $('late').textContent = a.checkedOut
+      ? 'Clocked out at ' + fmt(a.checkOutAt)
+      : 'Counting since ' + t;
+  }
+
   function tick() {
+    if (live) { syncFromAttendance(); render(); return; }
     const now = Date.now(), dt = (now - s.last) * s.speed; s.last = now;
     if (s.state === 'in' && !s.idle) {
       const before = Math.floor(s.workedMs / 300000);
@@ -231,6 +280,11 @@
   }
 
   $('clock').onclick = () => {
+    if (live) {
+      $('clock').disabled = true;
+      window.bpoTime.clockIn().then(r => toast(r.message, !r.ok));
+      return;
+    }
     s.state = 'in'; toast('Clocked in. Your time is now being counted.'); $('late').textContent = 'On time (in at 8:57 PM)';
     render();
   };
@@ -242,7 +296,11 @@
     const max = () => slide.clientWidth - knob.offsetWidth - 8;
     const move = x => { pos = Math.max(0, Math.min(max(), x)); knob.style.transform = 'translateX(' + pos + 'px)';
       knob.setAttribute('aria-valuenow', Math.round(pos / max() * 100)); };
-    const done = () => { s.state = 'out'; toast('Clocked out. You worked ' + hm(s.workedMs) + ' today.'); move(0); render(); };
+    const done = () => {
+      move(0);
+      if (live) { window.bpoTime.clockOut().then(r => toast(r.message, !r.ok)); return; }
+      s.state = 'out'; toast('Clocked out. You worked ' + hm(s.workedMs) + ' today.'); render();
+    };
     const release = () => {
       if (!dragging) return; dragging = false;
       if (pos >= max() * 0.95) return done();
@@ -283,10 +341,17 @@
   if (new URLSearchParams(location.search).get('app') === '1') {
     document.documentElement.classList.add('app');
     const panel = $('panel'), sim = document.querySelector('.sim');
-    panel.insertBefore(sim, document.querySelector('.foot'));
     document.querySelector('.stage').appendChild(panel);
     document.querySelector('.desk').remove();
     if (window.bpoTime) {
+      // Real data now: the demo controls, the made-up shift and the made-up counts do not belong here.
+      sim.remove();
+      $('shift').firstChild.textContent = 'Not clocked in yet';
+      $('late').textContent = 'Press Clock in to start your time';
+      $('notif').textContent = '-';
+      $('todo').textContent = '-';
+      window.bpoTime.onAttendance(applyAttendance);
+      window.bpoTime.getAttendance().then(applyAttendance);
       $('portal').onclick = () => window.bpoTime.openPortal();
       $('signout').onclick = () => window.bpoTime.signOut();
       window.bpoTime.onAuth(applyAuth);
@@ -294,7 +359,8 @@
       window.bpoTime.getAuth().then(applyAuth);
     }
   }
-  setInterval(tick, 250);
+  setInterval(() => { tick(); paintClocks(); }, 250);
+  paintClocks();
   render();
 </script>
 </body>

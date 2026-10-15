@@ -3,6 +3,7 @@ import * as path from "path";
 import * as zlib from "zlib";
 import { desktopState, sendToBottom, sendToTop } from "./winpos";
 import * as auth from "./auth";
+import * as attendance from "./attendance";
 
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
 const WIDTH = 300; // DIPs
@@ -239,7 +240,14 @@ app.whenReady().then(() => {
   ipcMain.on("app:quit", quit);
   ipcMain.handle("auth:get", () => auth.getState());
   ipcMain.on("auth:signout", signOut);
-  auth.onChange((s) => win?.webContents.send("auth:state", s));
+  auth.onChange((s) => {
+    win?.webContents.send("auth:state", s);
+    attendance.follow(s);
+  });
+  attendance.onChange((a) => win?.webContents.send("attendance:state", a));
+  ipcMain.handle("attendance:get", () => attendance.get());
+  ipcMain.handle("attendance:clockIn", () => attendance.clockIn());
+  ipcMain.handle("attendance:clockOut", () => attendance.clockOut());
 
   // Signed in already? Verify quietly. Started by a bpotime:// link? Handle it once we know that.
   void auth.restore().then(() => {
