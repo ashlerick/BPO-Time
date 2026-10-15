@@ -107,7 +107,7 @@
         <b>Juan Dela Cruz</b>
         <span class="status"><span class="dot" id="dot"></span><span id="statusText">Not clocked in</span></span>
       </div>
-      <button class="iconbtn" id="minimize" title="Minimize to the tray">&#8211;</button>
+      <button class="iconbtn" id="minimize" title="Minimize (send behind your apps)">&#8211;</button>
     </div>
     <div class="body">
       <div class="clock">
@@ -197,7 +197,7 @@
   $('lunch').onclick = () => { s.state = 'lunch'; toast('Lunch started. Timer paused.'); render(); };
   $('minimize').onclick = () => {
     if (window.bpoTime) window.bpoTime.minimize();
-    else toast('In the app this hides the panel to the tray and gives the screen space back.');
+    else toast('In the app this sends the panel behind your other windows. Open it again from the tray.');
   };
   $('priv').onclick = () => $('drawer').classList.toggle('open');
   $('portal').onclick = () => toast('This would open the BPO Portal in your browser.');

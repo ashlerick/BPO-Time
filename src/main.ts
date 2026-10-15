@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
 import * as path from "path";
 import * as zlib from "zlib";
-import { sendToBottom } from "./winpos";
+import { desktopState, sendToBottom, sendToTop } from "./winpos";
 
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
 const WIDTH = 300; // DIPs
@@ -9,6 +9,7 @@ const WIDTH = 300; // DIPs
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let shown = true;
+let liftedForDesktop = false;
 let hwnd = 0;
 
 function crc32(buf: Buffer): number {
@@ -98,10 +99,11 @@ function place(): void {
   sendToBottom(hwnd);
 }
 
+// "Minimize" does not hide anything: it pushes the panel behind your apps. It stays on the desktop,
+// so the bare desktop is never shown without it.
 function minimize(): void {
-  if (!win || !shown) return;
-  shown = false;
-  win.hide();
+  if (!win) return;
+  sendToBottom(hwnd);
 }
 
 // Bring the panel in front of the other apps (from the tray). It drops back behind them as soon as you
@@ -111,7 +113,28 @@ function raise(): void {
   shown = true;
   place();
   win.showInactive();
-  win.moveTop();
+  // Flip always-on-top on and off: that lifts it over everything, then it stays an ordinary window.
+  win.setAlwaysOnTop(true);
+  sendToTop(hwnd);
+  win.setAlwaysOnTop(false);
+  sendToTop(hwnd);
+}
+
+// "Show desktop" (Win+D or the corner button) lifts the desktop above every window, which would cover the
+// panel. Put the panel back above it while that lasts, then back to the bottom when the apps return.
+function keepAboveShownDesktop(): void {
+  if (!win || !shown) return;
+  const s = desktopState(hwnd);
+  if (s.desktopOnTop && s.panelBelowDesktop) {
+    // A plain raise cannot beat the desktop while it is lifted; always-on-top can.
+    win.setAlwaysOnTop(true);
+    sendToTop(hwnd);
+    liftedForDesktop = true;
+  } else if (!s.desktopOnTop && liftedForDesktop) {
+    liftedForDesktop = false;
+    win.setAlwaysOnTop(false);
+    sendToBottom(hwnd);
+  }
 }
 
 function quit(): void {
@@ -137,12 +160,20 @@ function createWindow(): void {
   });
   hwnd = Number(win.getNativeWindowHandle().readBigUInt64LE(0));
   place();
+  win.once("ready-to-show", () => sendToBottom(hwnd));
   win.on("minimize", () => {
     // Win+D (Show desktop) minimizes every window; the panel stays. Our own minimize uses hide().
     win?.showInactive();
     sendToBottom(hwnd);
   });
   win.loadFile(path.join(__dirname, "..", "mockup", "index.html"), { query: { app: "1" } });
+}
+
+// A second launch (for example from the Start menu) just brings the existing panel to the front.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", raise);
 }
 
 app.whenReady().then(() => {
@@ -161,10 +192,12 @@ app.whenReady().then(() => {
 
   ipcMain.on("panel:minimize", minimize);
   tray.on("click", raise);
+  tray.on("double-click", raise);
   ipcMain.on("portal:open", () => shell.openExternal(PORTAL_URL));
   ipcMain.on("app:quit", quit);
 
   // Monitor plugged in, resolution or scale changed: take the edge again.
+  setInterval(keepAboveShownDesktop, 250);
   screen.on("display-metrics-changed", () => shown && place());
 });
 
