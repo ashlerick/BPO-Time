@@ -15,19 +15,22 @@ export interface Attendance {
 
 const REFRESH_MS = 60_000;
 
-let current: Attendance | null = null;
-const listeners: Array<(a: Attendance | null) => void> = [];
+/** What the panel is given: today's record, or why there is none ("error"), or nothing yet. */
+export type AttendanceState = Attendance | { error: string } | null;
+
+let current: AttendanceState = null;
+const listeners: Array<(a: AttendanceState) => void> = [];
 let timer: ReturnType<typeof setInterval> | null = null;
 
-export function get(): Attendance | null {
+export function get(): AttendanceState {
   return current;
 }
 
-export function onChange(fn: (a: Attendance | null) => void): void {
+export function onChange(fn: (a: AttendanceState) => void): void {
   listeners.push(fn);
 }
 
-function set(next: Attendance | null): void {
+function set(next: AttendanceState): void {
   current = next;
   listeners.forEach((fn) => fn(next));
 }
@@ -36,6 +39,7 @@ function set(next: Attendance | null): void {
 export async function refresh(): Promise<void> {
   const r = await auth.api("/hr/device-today", "GET");
   if (r.kind === "ok") set(r.body as Attendance);
+  else if (r.kind === "error" && auth.getState().status === "signedIn") set({ error: r.message });
 }
 
 async function act(path: string, success: string): Promise<{ ok: boolean; message: string }> {

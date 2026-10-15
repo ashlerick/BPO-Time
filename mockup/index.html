@@ -42,12 +42,15 @@
   .week { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 10px; background: var(--bg); border-radius: 8px; }
   .week span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
   .actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
-  .slide { position: relative; height: 46px; border-radius: 8px; background: var(--bad); color: #fff; overflow: hidden;
-    user-select: none; touch-action: none; }
+  .slide { position: relative; height: 46px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line);
+    color: var(--muted); overflow: hidden; user-select: none; touch-action: none; }
+  .slide.ok { border-color: var(--ok); color: var(--ok); }
   .slide-label { position: absolute; inset: 0; display: grid; place-items: center; padding-left: 40px; font-weight: 600; pointer-events: none; }
-  .slide-knob { position: absolute; top: 4px; left: 4px; width: 38px; height: 38px; border-radius: 6px; background: #fff;
-    color: var(--bad); display: grid; place-items: center; font-size: 26px; line-height: 1; cursor: grab; touch-action: none; }
-  .slide-knob:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .slide-knob { position: absolute; top: 4px; left: 4px; width: 38px; height: 38px; border-radius: 6px; background: var(--brand);
+    color: #fff; display: grid; place-items: center; font-size: 26px; line-height: 1; cursor: grab; touch-action: none; }
+  .slide-knob:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .slide.ok .slide-knob { background: var(--ok); }
+  #clockout:disabled { opacity: .45; }
   .slide.snap .slide-knob { transition: transform .18s ease; }
   button.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 9px 10px;
     border-radius: 8px; font: inherit; cursor: pointer; }
@@ -138,10 +141,11 @@
       <div class="actions">
         <button class="btn primary main" id="clock">Clock in</button>
         <div class="slide" id="slide" hidden>
-          <span class="slide-label">Slide to clock out</span>
-          <div class="slide-knob" id="knob" tabindex="0" role="slider" aria-label="Slide to clock out"
+          <span class="slide-label" id="slideLabel">Slide to confirm</span>
+          <div class="slide-knob" id="knob" tabindex="0" role="slider" aria-label="Slide to confirm clock out"
                aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">&#8250;</div>
         </div>
+        <button class="btn danger main" id="clockout" disabled hidden>Clock out</button>
       </div>
       <div class="shift" id="shift">Shift 9:00 PM - 6:00 AM<small id="late">Not started yet</small></div>
       <div class="chips">
@@ -236,7 +240,10 @@
     // Clock in is a button. Clock out is a slider, so it cannot be pressed by accident.
     const done = !!(s.att && s.att.checkedOut);
     $('clock').hidden = s.state === 'in';
-    $('slide').hidden = s.state !== 'in' || !auth.signedIn;
+    const showOut = s.state === 'in' && auth.signedIn;
+    $('slide').hidden = !showOut;
+    $('clockout').hidden = !showOut;
+    if (!showOut) resetSlide();
     $('clock').textContent = done ? 'Clocked out for today' : 'Clock in';
     $('clock').disabled = !auth.signedIn || done || (live && !s.att);
     $('syncDot').style.background = s.offline ? 'var(--warn)' : 'var(--ok)';
@@ -246,7 +253,18 @@
   // Real attendance from the portal (app only). The server's clock is the reference: its time at the
   // moment of the reply, plus however long ago we received it, so a wrong PC clock cannot change hours.
   const live = !!window.bpoTime;
+  let resetSlide = () => {};
   function applyAttendance(a) {
+    if (a && a.error) {
+      // Signed in, but the portal has no time tracking for this PC yet: say so, never fake numbers.
+      s.att = null;
+      const notice = $('notice');
+      notice.hidden = false;
+      notice.innerHTML = '<b>Time tracking isn\x27t available yet</b>' + a.error;
+      syncFromAttendance(); render();
+      return;
+    }
+    if (auth.signedIn) $('notice').hidden = true;
     s.att = a ? Object.assign({}, a, { receivedAt: Date.now() }) : null;
     syncFromAttendance();
     render();
@@ -289,31 +307,46 @@
     render();
   };
 
-  // Slide to clock out. Letting go before the end snaps back and does nothing.
+  // Clock out is two deliberate steps: slide to confirm, then press the Clock out button that lights up.
+  // Sliding alone never clocks out. A confirmation left alone for 8 seconds is dropped.
   (function () {
-    const slide = $('slide'), knob = $('knob');
-    let startX = 0, pos = 0, dragging = false;
-    const max = () => slide.clientWidth - knob.offsetWidth - 8;
+    const slide = $('slide'), knob = $('knob'), label = $('slideLabel'), out = $('clockout');
+    let startX = 0, pos = 0, dragging = false, confirmed = false, timer = null;
+    const max = () => slide.clientWidth - knob.offsetWidth - 10;
     const move = x => { pos = Math.max(0, Math.min(max(), x)); knob.style.transform = 'translateX(' + pos + 'px)';
       knob.setAttribute('aria-valuenow', Math.round(pos / max() * 100)); };
-    const done = () => {
-      move(0);
-      if (live) { window.bpoTime.clockOut().then(r => toast(r.message, !r.ok)); return; }
-      s.state = 'out'; toast('Clocked out. You worked ' + hm(s.workedMs) + ' today.'); render();
+    resetSlide = () => {
+      clearTimeout(timer); confirmed = false; dragging = false;
+      slide.classList.remove('ok'); label.textContent = 'Slide to confirm'; out.disabled = true;
+      if (pos) { slide.classList.add('snap'); move(0); setTimeout(() => slide.classList.remove('snap'), 220); }
     };
+    const confirm = () => {
+      confirmed = true; move(max());
+      slide.classList.add('ok'); label.textContent = 'Confirmed. Now press Clock out'; out.disabled = false;
+      clearTimeout(timer); timer = setTimeout(resetSlide, 8000);
+    };
+    out.addEventListener('click', () => {
+      if (!confirmed) return;
+      out.disabled = true;
+      if (live) window.bpoTime.clockOut().then(r => toast(r.message, !r.ok));
+      else { s.state = 'out'; toast('Clocked out. You worked ' + hm(s.workedMs) + ' today.'); render(); }
+      resetSlide();
+    });
     const release = () => {
       if (!dragging) return; dragging = false;
-      if (pos >= max() * 0.95) return done();
-      slide.classList.add('snap'); move(0); setTimeout(() => slide.classList.remove('snap'), 220);
+      if (pos >= max() * 0.95) confirm(); else resetSlide();
     };
-    knob.addEventListener('pointerdown', e => { dragging = true; startX = e.clientX - pos; slide.classList.remove('snap'); knob.setPointerCapture(e.pointerId); });
+    knob.addEventListener('pointerdown', e => {
+      if (confirmed) { resetSlide(); return; }   // grabbing a confirmed slider cancels it
+      dragging = true; startX = e.clientX - pos; slide.classList.remove('snap'); knob.setPointerCapture(e.pointerId);
+    });
     knob.addEventListener('pointermove', e => { if (dragging) move(e.clientX - startX); });
     knob.addEventListener('pointerup', release);
     knob.addEventListener('pointercancel', release);
-    // Keyboard: Right arrow moves it along in steps; at the end it confirms. Escape or Left backs off.
+    // Keyboard: Right arrow moves it along in steps and confirms at the end; Left or Escape cancels.
     knob.addEventListener('keydown', e => {
-      if (e.key === 'ArrowRight') { move(pos + max() / 4); if (pos >= max() * 0.95) done(); }
-      else if (e.key === 'ArrowLeft' || e.key === 'Escape') move(0);
+      if (e.key === 'ArrowRight' && !confirmed) { move(pos + max() / 4); if (pos >= max() * 0.95) confirm(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'Escape') resetSlide();
     });
   })();
   $('minimize').onclick = () => {

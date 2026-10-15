@@ -94,10 +94,16 @@ export async function api(pathname: string, method: "GET" | "POST"): Promise<Api
   try {
     const res = await call(pathname, { method, headers: { Authorization: `Bearer ${token}` } });
     if (res.status === 401) {
-      const message = await messageOf(res, "This PC is no longer connected. Press Launch App in the portal to connect again.");
-      clearToken();
-      set({ status: "signedOut", message });
-      return { kind: "error", status: 401, message };
+      // A 401 does not by itself mean this PC was disconnected: a route the portal does not have yet
+      // is answered the same way. Only the device check itself may sign this PC out.
+      const probe = await call("/hr/device-me", { headers: { Authorization: `Bearer ${token}` } });
+      if (probe.status === 401) {
+        const message = await messageOf(probe, "This PC is no longer connected. Press Launch App in the portal to connect again.");
+        clearToken();
+        set({ status: "signedOut", message });
+        return { kind: "error", status: 401, message };
+      }
+      return { kind: "error", status: 404, message: "The portal doesn't have time tracking switched on yet. You are still signed in." };
     }
     if (!res.ok) return { kind: "error", status: res.status, message: await messageOf(res, "The portal could not do that. Try again in a moment.") };
     return { kind: "ok", status: res.status, body: await res.json() };
