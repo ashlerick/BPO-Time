@@ -76,6 +76,19 @@
   .toast { background: var(--ink); color: var(--panel); padding: 10px 14px; border-radius: 8px; max-width: 320px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
   .toast.err { background: var(--bad); color: #fff; }
   @media (max-width: 700px) { .stage { flex-direction: column; } .panel { position: static; align-self: center; } #toasts { right: 16px; } }
+
+  /* App mode: running inside the Windows (Electron) window */
+  html.app body { overflow: hidden; }
+  html.app .stage { padding: 0; min-height: 100vh; display: block; }
+  html.app .desk > h1, html.app .desk > p { display: none; }
+  html.app .desk { max-width: none; }
+  html.app .panel { width: 100%; height: 100vh; border: 0; border-radius: 0; box-shadow: none; position: static; }
+  html.app .panel .body { flex: 1; overflow: auto; }
+  html.app .panel.collapsed { width: 100%; }
+  html.app .sim { margin: 0 14px 12px; padding: 10px; }
+  html.app .sim .note { display: none; }
+  html.app #toasts { left: 12px; right: 12px; bottom: 56px; }
+  html.app .toast { max-width: none; }
 </style>
 </head>
 <body>
@@ -217,6 +230,17 @@
   };
   $('simFast').onclick = () => { s.speed = s.speed === 1 ? 60 : 1; toast(s.speed === 1 ? 'Clock at normal speed.' : 'Clock running 60x faster for the demo.'); };
 
+
+  if (new URLSearchParams(location.search).get('app') === '1') {
+    document.documentElement.classList.add('app');
+    const panel = $('panel'), sim = document.querySelector('.sim');
+    panel.insertBefore(sim, document.querySelector('.foot'));
+    document.querySelector('.stage').appendChild(panel);
+    document.querySelector('.desk').remove();
+    window.bpoTime && ($('portal').onclick = () => window.bpoTime.openPortal());
+    $('collapse').addEventListener('click', () =>
+      window.bpoTime && window.bpoTime.setCollapsed(panel.classList.contains('collapsed')));
+  }
   setInterval(tick, 250);
   render();
 </script>

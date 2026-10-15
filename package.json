@@ -1,0 +1,16 @@
+{
+  "name": "bpo-time",
+  "version": "0.0.1",
+  "description": "BPO Time: desktop sidebar for the BPO Portal (mockup stage)",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && node scripts/start.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "electron": "^44.7.2",
+    "typescript": "^7.0.2"
+  }
+}
