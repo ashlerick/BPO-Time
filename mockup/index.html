@@ -89,6 +89,11 @@
   html.app .sim .note { display: none; }
   html.app #toasts { left: 12px; right: 12px; bottom: 56px; }
   html.app .toast { max-width: none; }
+  html.app .head { -webkit-app-region: drag; cursor: grab; }
+  html.app .iconbtn, html.app .bar .dot { -webkit-app-region: no-drag; cursor: pointer; }
+  html.app .panel.collapsed .sim, html.app .panel.collapsed .drawer { display: none; }
+  #minimize { display: none; }
+  html.app #minimize { display: inline-block; }
 </style>
 </head>
 <body>
@@ -113,6 +118,7 @@
         <b>Juan Dela Cruz</b>
         <span class="status"><span class="dot" id="dot"></span><span id="statusText">Not clocked in</span></span>
       </div>
+      <button class="iconbtn hide" id="minimize" title="Minimize to the taskbar">&#8211;</button>
       <button class="iconbtn" id="collapse" title="Collapse to a thin bar">&#8250;</button>
     </div>
 
@@ -237,6 +243,7 @@
     panel.insertBefore(sim, document.querySelector('.foot'));
     document.querySelector('.stage').appendChild(panel);
     document.querySelector('.desk').remove();
+    $('minimize').onclick = () => window.bpoTime && window.bpoTime.minimize();
     window.bpoTime && ($('portal').onclick = () => window.bpoTime.openPortal());
     $('collapse').addEventListener('click', () =>
       window.bpoTime && window.bpoTime.setCollapsed(panel.classList.contains('collapsed')));

@@ -5,6 +5,8 @@ import * as zlib from "zlib";
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
 const WIDTH = 300;
 const COLLAPSED_WIDTH = 56;
+const HEIGHT = 640;
+const COLLAPSED_HEIGHT = 130;
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -46,10 +48,23 @@ function trayIcon(): Electron.NativeImage {
   return nativeImage.createFromBuffer(png);
 }
 
-function place(width: number): void {
+function placeAtEdge(): void {
   if (!win) return;
   const area = screen.getPrimaryDisplay().workArea;
-  win.setBounds({ x: area.x + area.width - width, y: area.y, width, height: area.height });
+  const height = Math.min(HEIGHT, area.height);
+  win.setBounds({ x: area.x + area.width - WIDTH, y: area.y + 40, width: WIDTH, height });
+}
+
+// Resize in place, keeping the right edge where the user dragged it.
+function setCollapsed(collapsed: boolean): void {
+  if (!win) return;
+  const b = win.getBounds();
+  const area = screen.getDisplayMatching(b).workArea;
+  const width = collapsed ? COLLAPSED_WIDTH : WIDTH;
+  const height = collapsed ? COLLAPSED_HEIGHT : Math.min(HEIGHT, area.height);
+  const x = b.x + b.width - width;
+  const y = Math.min(b.y, area.y + area.height - height);
+  win.setBounds({ x, y, width, height });
 }
 
 function createWindow(): void {
@@ -58,7 +73,7 @@ function createWindow(): void {
     frame: false,
     resizable: false,
     alwaysOnTop: true,
-    skipTaskbar: true,
+    skipTaskbar: false,
     backgroundColor: "#1a212b",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -66,7 +81,7 @@ function createWindow(): void {
       nodeIntegration: false,
     },
   });
-  place(WIDTH);
+  placeAtEdge();
   win.loadFile(path.join(__dirname, "..", "mockup", "index.html"), { query: { app: "1" } });
   win.on("close", (e) => {
     // Closing hides to the tray; quit from the tray menu.
@@ -94,7 +109,8 @@ app.whenReady().then(() => {
   );
   tray.on("click", () => (win?.isVisible() ? win.hide() : win?.show()));
 
-  ipcMain.on("panel:collapsed", (_e, collapsed: boolean) => place(collapsed ? COLLAPSED_WIDTH : WIDTH));
+  ipcMain.on("panel:collapsed", (_e, collapsed: boolean) => setCollapsed(collapsed));
+  ipcMain.on("panel:minimize", () => win?.minimize());
   ipcMain.on("portal:open", () => shell.openExternal(PORTAL_URL));
   ipcMain.on("app:quit", () => { quitting = true; app.quit(); });
 });
