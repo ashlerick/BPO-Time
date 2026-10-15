@@ -119,6 +119,26 @@ Rules:
 - It is already built (`frontend/src/components/ui/DesktopAppButton.tsx`) but **hidden** until the first
   release exists. To switch it on: publish the installer, then set `DESKTOP_APP_URL` to that repo's release asset and `DESKTOP_APP_READY = true` in that file.
 
+### 5.6a Open from the portal (built)
+
+- The installer, and the app on first run, register the `bpotime://` link with Windows.
+- The portal's button is **Open app** once it has opened the app on that browser, and **Desktop app**
+  before that. Pressing it goes to `bpotime://open`, which starts the app or brings it to the front.
+- A web page cannot ask the browser whether a program is installed. The button waits about two
+  seconds to see whether the browser handed focus to another program. If not, it asks "Didn't open?"
+  with **Download** and **Try again**. It is a good signal, not a guarantee, so a miss is a question and
+  not an error.
+- Once the portal has a "My devices" list, that list should decide the label (connected PC means "Open
+  app") and the timed check stays as the fallback.
+- The first time, Chrome and Edge ask "Open BPO Time?" with an "Always allow" box. That is the browser's
+  rule.
+- **Security:** a link is text from any web page. The app honours only a short allowlist of actions
+  (currently `open`) and never uses anything else in the link to open files, run commands or visit
+  addresses. The sign-in handoff in section 5.3 reuses this link.
+- Testing before there is a public release: open the portal once with `?desktop=on` to show the button
+  in that browser (`?desktop=off` hides it again). Run the app once from source so Windows learns the
+  link, then press the button.
+
 ### 5.7 Distribution
 
 - Windows installer built with electron-builder, published to the app repo's GitHub Releases, with auto-update. Its builds and releases run from that
