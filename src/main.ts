@@ -29,23 +29,64 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([len, body, crc]);
 }
 
-// Plain blue 16x16 square, enough for a tray icon until there is real artwork.
+// Tray icon drawn in code (no image tooling in the repo yet): a white clock face on a blue rounded
+// square, 4x4 supersampled so the edges are smooth. Swap for real artwork before release.
 function trayIcon(): Electron.NativeImage {
-  const size = 16;
+  const size = 32;
+  const ss = 4;
+  const c = (size - 1) / 2 + 0.5;
+  const inRoundedSquare = (x: number, y: number): boolean => {
+    const r = 7;
+    const dx = Math.max(r - x, 0, x - (size - r));
+    const dy = Math.max(r - y, 0, y - (size - r));
+    return dx * dx + dy * dy <= r * r;
+  };
+  const isWhite = (x: number, y: number): boolean => {
+    const d = Math.hypot(x - c, y - c);
+    if (d >= 10 && d <= 12.5) return true; // ring
+    if (d <= 2) return true; // centre
+    if (Math.abs(x - c) <= 1.1 && y <= c && y >= c - 8.5) return true; // minute hand
+    if (Math.abs(y - c) <= 1.1 && x >= c && x <= c + 6.5) return true; // hour hand
+    return false;
+  };
+  const rows: Buffer[] = [];
+  for (let py = 0; py < size; py++) {
+    const row = Buffer.alloc(1 + size * 4);
+    for (let px = 0; px < size; px++) {
+      let bg = 0;
+      let fg = 0;
+      for (let sy = 0; sy < ss; sy++) {
+        for (let sx = 0; sx < ss; sx++) {
+          const x = px + (sx + 0.5) / ss;
+          const y = py + (sy + 0.5) / ss;
+          if (inRoundedSquare(x, y)) {
+            bg++;
+            if (isWhite(x, y)) fg++;
+          }
+        }
+      }
+      const n = ss * ss;
+      const o = 1 + px * 4;
+      const t = bg ? fg / bg : 0;
+      row[o] = Math.round(0x1f + (255 - 0x1f) * t);
+      row[o + 1] = Math.round(0x5f + (255 - 0x5f) * t);
+      row[o + 2] = Math.round(0xbf + (255 - 0xbf) * t);
+      row[o + 3] = Math.round((bg / n) * 255);
+    }
+    rows.push(row);
+  }
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(size, 0);
   ihdr.writeUInt32BE(size, 4);
   ihdr[8] = 8;
   ihdr[9] = 6;
-  const row = Buffer.concat([Buffer.from([0]), Buffer.concat(Array(size).fill(Buffer.from([0x1f, 0x5f, 0xbf, 0xff])))]);
-  const raw = Buffer.concat(Array(size).fill(row));
   const png = Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk("IHDR", ihdr),
-    chunk("IDAT", zlib.deflateSync(raw)),
+    chunk("IDAT", zlib.deflateSync(Buffer.concat(rows))),
     chunk("IEND", Buffer.alloc(0)),
   ]);
-  return nativeImage.createFromBuffer(png);
+  return nativeImage.createFromBuffer(png, { scaleFactor: 2 });
 }
 
 // Reserve the right edge of the primary monitor and size the window to it. The AppBar API works in
