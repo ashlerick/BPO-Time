@@ -169,11 +169,34 @@ function createWindow(): void {
   win.loadFile(path.join(__dirname, "..", "mockup", "index.html"), { query: { app: "1" } });
 }
 
-// A second launch (for example from the Start menu) just brings the existing panel to the front.
+const PROTOCOL = "bpotime";
+
+// Register bpotime:// with Windows so the portal's "Open app" button can start or focus the app. When
+// running from source, Windows has to be told to launch electron.exe with this app's folder.
+if (process.defaultApp && process.argv.length >= 2) {
+  app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+} else {
+  app.setAsDefaultProtocolClient(PROTOCOL);
+}
+
+// Only "bpotime://open" is understood so far. Never log the whole link: later it will carry a one-time code.
+function handleLink(argv: string[]): void {
+  const link = argv.find((a) => a.startsWith(PROTOCOL + "://"));
+  if (!link) return raise();
+  let host = "";
+  try {
+    host = new URL(link).hostname;
+  } catch {
+    return raise();
+  }
+  if (host === "open") raise();
+}
+
+// A second launch (Start menu, or the portal's button) hands over to the running panel instead.
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on("second-instance", raise);
+  app.on("second-instance", (_e, argv) => handleLink(argv));
 }
 
 app.whenReady().then(() => {
