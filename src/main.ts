@@ -3,6 +3,12 @@ import * as path from "path";
 import * as zlib from "zlib";
 
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
+// The portal's "Open app" button links to bpotime://open. Windows is told about this link type the
+// first time the app runs (and by the installer, later), so the browser can start or focus the app.
+const PROTOCOL = "bpotime";
+// Only these actions are honoured. A link is text from any web page: it must never be able to make
+// the app open files, run commands or visit addresses, so nothing in it is used except the action name.
+const LINK_ACTIONS = new Set(["open"]);
 const WIDTH = 300;
 const COLLAPSED_WIDTH = 56;
 const START_HEIGHT = 560; // replaced by the page as soon as it knows its real height
@@ -91,8 +97,51 @@ function createWindow(): void {
 
 let quitting = false;
 
+function showPanel(): void {
+  if (!win) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+// Handles bpotime://<action>. Anything that is not exactly a known action is ignored.
+function handleLink(raw: string | undefined): void {
+  if (!raw) return;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return;
+  }
+  if (url.protocol !== `${PROTOCOL}:`) return;
+  if (!LINK_ACTIONS.has(url.hostname)) return;
+  showPanel();
+}
+
+function registerProtocol(): void {
+  if (process.defaultApp && process.argv.length >= 2) {
+    // Running from source (`electron .`): Windows has to be told how to start us.
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+  } else {
+    app.setAsDefaultProtocolClient(PROTOCOL);
+  }
+}
+
+// One panel only. A second launch (including one from a bpotime:// link) hands over to the first.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", (_e, argv) => {
+    showPanel();
+    handleLink(argv.find((a) => a.startsWith(`${PROTOCOL}://`)));
+  });
+}
+
 app.whenReady().then(() => {
+  registerProtocol();
   createWindow();
+  // Started from a link while not running yet: the link is in our own arguments.
+  handleLink(process.argv.find((a) => a.startsWith(`${PROTOCOL}://`)));
 
   tray = new Tray(trayIcon());
   tray.setToolTip("BPO Time");
