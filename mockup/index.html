@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BPO Time - panel mockup</title>
+<style>
+  :root {
+    --bg: #f3f5f8; --panel: #ffffff; --ink: #1b2430; --muted: #6b7788; --line: #e1e6ed;
+    --brand: #1f5fbf; --ok: #1e9e5a; --warn: #d98a00; --bad: #c9372c; --idle: #7a5af8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #11161d; --panel: #1a212b; --ink: #e8edf3; --muted: #93a0b2; --line: #2a3340; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+  .stage { min-height: 100vh; display: flex; justify-content: space-between; gap: 24px; padding: 24px 16px; }
+  .desk { flex: 1; max-width: 560px; }
+  .desk h1 { font-size: 18px; margin: 0 0 6px; }
+  .desk p { color: var(--muted); margin: 0 0 14px; }
+  .sim { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .sim h2 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .sim button { margin: 0 6px 6px 0; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+  .panel { width: 300px; flex: none; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.14); display: flex; flex-direction: column;
+    align-self: flex-start; position: sticky; top: 24px; overflow: hidden; }
+  .panel.collapsed { width: 56px; }
+  .head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--brand); color: #fff;
+    display: grid; place-items: center; font-weight: 600; flex: none; }
+  .who { min-width: 0; flex: 1; }
+  .who b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status { font-size: 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .iconbtn { border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+  .iconbtn:hover { background: var(--bg); }
+  .body { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+  .clock { text-align: center; }
+  .clock .big { font-size: 40px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+  .clock .lbl { font-size: 12px; color: var(--muted); }
+  .week { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 10px; background: var(--bg); border-radius: 8px; }
+  .week span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .actions .main { grid-column: 1 / -1; }
+  button.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 9px 10px;
+    border-radius: 8px; font: inherit; cursor: pointer; }
+  button.btn:hover:not(:disabled) { border-color: var(--brand); }
+  button.btn:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; padding: 11px; }
+  button.danger { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 600; padding: 11px; }
+  button.active { background: var(--warn); border-color: var(--warn); color: #fff; }
+  .shift { font-size: 13px; border-left: 3px solid var(--ok); padding: 2px 0 2px 10px; }
+  .shift small { color: var(--muted); display: block; }
+  .chips { display: flex; gap: 8px; }
+  .chip { flex: 1; text-align: center; padding: 8px 6px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; color: var(--muted); }
+  .chip b { display: block; font-size: 18px; color: var(--ink); }
+  .foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .foot a { color: var(--brand); text-decoration: none; cursor: pointer; }
+  .sync { display: inline-flex; align-items: center; gap: 6px; }
+
+  .bar { display: none; flex-direction: column; align-items: center; gap: 12px; padding: 12px 0; }
+  .collapsed .head .who, .collapsed .body, .collapsed .foot, .collapsed .head .iconbtn.hide { display: none; }
+  .collapsed .head { border: 0; flex-direction: column; padding: 12px 0 4px; }
+  .collapsed .bar { display: flex; }
+  .bar .mini { writing-mode: vertical-rl; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .drawer { padding: 14px; font-size: 13px; display: none; border-top: 1px solid var(--line); background: var(--bg); }
+  .drawer.open { display: block; }
+  .drawer h3 { margin: 0 0 6px; font-size: 13px; }
+  .drawer ul { margin: 0 0 8px; padding-left: 18px; }
+  .drawer .no { color: var(--muted); }
+
+  #toasts { position: fixed; right: 330px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 5; }
+  .toast { background: var(--ink); color: var(--panel); padding: 10px 14px; border-radius: 8px; max-width: 320px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+  .toast.err { background: var(--bad); color: #fff; }
+  @media (max-width: 700px) { .stage { flex-direction: column; } .panel { position: static; align-self: center; } #toasts { right: 16px; } }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="desk">
+    <h1>BPO Time: panel mockup</h1>
+    <p>Fake data, nothing is saved or sent. The panel on the right is what sits on the screen edge. Click
+      around, then tell me what to change.</p>
+    <div class="sim">
+      <h2>Simulate (not part of the app)</h2>
+      <button class="btn" id="simIdle">PC goes idle / comes back</button>
+      <button class="btn" id="simOffline">Go offline / back online</button>
+      <button class="btn" id="simFast">Speed up the clock (x60)</button>
+      <div class="note">The real app reads idle from Windows, not from this page. The week total here is made-up.</div>
+    </div>
+  </div>
+
+  <aside class="panel" id="panel">
+    <div class="head">
+      <div class="avatar">JD</div>
+      <div class="who">
+        <b>Juan Dela Cruz</b>
+        <span class="status"><span class="dot" id="dot"></span><span id="statusText">Not clocked in</span></span>
+      </div>
+      <button class="iconbtn" id="collapse" title="Collapse to a thin bar">&#8250;</button>
+    </div>
+
+    <div class="bar">
+      <div class="mini" id="miniTime">0:00</div>
+      <span class="dot" id="miniDot"></span>
+    </div>
+
+    <div class="body">
+      <div class="clock">
+        <div class="big" id="today">0:00:00</div>
+        <div class="lbl">worked today</div>
+      </div>
+      <div class="week"><span>This week</span><span id="week">31:42</span></div>
+      <div class="actions">
+        <button class="btn primary main" id="clock">Clock in</button>
+        <button class="btn" id="brk" disabled>Break</button>
+        <button class="btn" id="lunch" disabled>Lunch</button>
+      </div>
+      <div class="shift" id="shift">Shift 9:00 PM - 6:00 AM<small id="late">Not started yet</small></div>
+      <div class="chips">
+        <div class="chip"><b id="notif">3</b>notifications</div>
+        <div class="chip"><b id="todo">2</b>to-dos due</div>
+      </div>
+    </div>
+
+    <div class="drawer" id="drawer">
+      <h3>What this app records about you</h3>
+      <ul>
+        <li>When you clock in, out, break or lunch</li>
+        <li>5-minute blocks marked <i>active</i> or <i>idle</i></li>
+      </ul>
+      <h3 class="no">What it never records</h3>
+      <ul class="no">
+        <li>Screenshots</li><li>Keystrokes</li><li>Window or app names</li><li>Websites</li>
+      </ul>
+    </div>
+
+    <div class="foot">
+      <span class="sync"><span class="dot" id="syncDot" style="background:var(--ok)"></span><span id="syncText">Synced</span></span>
+      <span><a id="priv">What's recorded</a> &middot; <a id="portal">Open portal</a></span>
+    </div>
+  </aside>
+</div>
+<div id="toasts"></div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const s = { state: 'out', workedMs: 0, idle: false, offline: false, queued: 0, speed: 1, last: Date.now(), weekBaseMs: (31*60+42)*60000 };
+  const COLORS = { out: 'var(--muted)', in: 'var(--ok)', break: 'var(--warn)', lunch: 'var(--warn)', idle: 'var(--idle)' };
+
+  const hms = ms => { const t = Math.floor(ms/1000), h = Math.floor(t/3600), m = Math.floor(t%3600/60), x = t%60;
+    return h + ':' + String(m).padStart(2,'0') + ':' + String(x).padStart(2,'0'); };
+  const hm = ms => { const m = Math.floor(ms/60000); return Math.floor(m/60) + ':' + String(m%60).padStart(2,'0'); };
+
+  function toast(msg, err) {
+    const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
+    $('toasts').appendChild(t); setTimeout(() => t.remove(), 3500);
+  }
+
+  function render() {
+    const eff = s.idle && s.state === 'in' ? 'idle' : s.state;
+    const label = { out: 'Not clocked in', in: 'Clocked in', break: 'On break', lunch: 'On lunch', idle: 'Idle - timer paused' }[eff];
+    $('statusText').textContent = label;
+    for (const id of ['dot','miniDot']) $(id).style.background = COLORS[eff];
+    $('today').textContent = hms(s.workedMs);
+    $('miniTime').textContent = hm(s.workedMs);
+    $('week').textContent = hm(s.weekBaseMs + s.workedMs);
+    const c = $('clock');
+    c.textContent = s.state === 'out' ? 'Clock in' : (s.state === 'in' ? 'Clock out' : 'Resume work');
+    c.className = 'btn main ' + (s.state === 'in' ? 'danger' : 'primary');
+    $('brk').disabled = s.state !== 'in';
+    $('lunch').disabled = s.state !== 'in';
+    $('syncDot').style.background = s.offline ? 'var(--warn)' : 'var(--ok)';
+    $('syncText').textContent = s.offline ? 'Offline - ' + s.queued + ' block(s) queued' : 'Synced';
+  }
+
+  function tick() {
+    const now = Date.now(), dt = (now - s.last) * s.speed; s.last = now;
+    if (s.state === 'in' && !s.idle) {
+      const before = Math.floor(s.workedMs / 300000);
+      s.workedMs += dt;
+      if (Math.floor(s.workedMs / 300000) > before && s.offline) s.queued++;
+    }
+    render();
+  }
+
+  $('clock').onclick = () => {
+    if (s.state === 'out') { s.state = 'in'; toast('Clocked in. Your time is now being counted.'); $('late').textContent = 'On time (in at 8:57 PM)'; }
+    else if (s.state === 'in') { s.state = 'out'; toast('Clocked out. You worked ' + hm(s.workedMs) + ' today.'); }
+    else { s.state = 'in'; toast('Back to work. Timer running.'); }
+    render();
+  };
+  $('brk').onclick = () => { s.state = 'break'; toast('Break started. Timer paused.'); render(); };
+  $('lunch').onclick = () => { s.state = 'lunch'; toast('Lunch started. Timer paused.'); render(); };
+  $('collapse').onclick = () => {
+    const p = $('panel'); p.classList.toggle('collapsed');
+    $('collapse').innerHTML = p.classList.contains('collapsed') ? '&#8249;' : '&#8250;';
+    if (p.classList.contains('collapsed')) $('miniDot').onclick = () => $('collapse').click();
+  };
+  $('priv').onclick = () => $('drawer').classList.toggle('open');
+  $('portal').onclick = () => toast('This would open the BPO Portal in your browser.');
+  $('notif').parentElement.onclick = () => toast('This would open your notifications in the portal.');
+  $('todo').parentElement.onclick = () => toast('This would open your to-dos in the portal.');
+
+  $('simIdle').onclick = () => {
+    if (s.state !== 'in') return toast('Clock in first, idle is only counted while you are clocked in.', true);
+    s.idle = !s.idle; toast(s.idle ? 'No activity for 5 minutes. Timer paused as idle.' : 'Welcome back. Timer running again.'); render();
+  };
+  $('simOffline').onclick = () => {
+    s.offline = !s.offline;
+    if (s.offline) toast('No connection. Your time keeps counting and will upload when you are back online.');
+    else { toast('Back online. ' + s.queued + ' queued block(s) uploaded.'); s.queued = 0; }
+    render();
+  };
+  $('simFast').onclick = () => { s.speed = s.speed === 1 ? 60 : 1; toast(s.speed === 1 ? 'Clock at normal speed.' : 'Clock running 60x faster for the demo.'); };
+
+  setInterval(tick, 250);
+  render();
+</script>
+</body>
+</html>
