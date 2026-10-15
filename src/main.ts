@@ -5,11 +5,10 @@ import { registerAppBar, removeAppBar, setAppBarWidth } from "./appbar";
 
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
 const WIDTH = 300; // DIPs
-const COLLAPSED_WIDTH = 56;
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let collapsed = false;
+let docked = false;
 let hwnd = 0;
 
 function crc32(buf: Buffer): number {
@@ -55,7 +54,7 @@ function dock(): void {
   if (!win) return;
   const display = screen.getPrimaryDisplay();
   const monitor = screen.dipToScreenRect(null, display.bounds);
-  const width = Math.round((collapsed ? COLLAPSED_WIDTH : WIDTH) * display.scaleFactor);
+  const width = Math.round(WIDTH * display.scaleFactor);
   const rc = setAppBarWidth(hwnd, {
     left: monitor.x,
     top: monitor.y,
@@ -65,6 +64,22 @@ function dock(): void {
   win.setBounds(
     screen.screenToDipRect(null, { x: rc.left, y: rc.top, width: rc.right - rc.left, height: rc.bottom - rc.top })
   );
+}
+
+// Minimize: hide the panel and give the screen space back. Restoring takes the edge again.
+function minimize(): void {
+  if (!win || !docked) return;
+  removeAppBar(hwnd);
+  docked = false;
+  win.hide();
+}
+
+function restore(): void {
+  if (!win || docked) return;
+  registerAppBar(hwnd);
+  docked = true;
+  dock();
+  win.show();
 }
 
 function quit(): void {
@@ -88,6 +103,7 @@ function createWindow(): void {
   });
   hwnd = Number(win.getNativeWindowHandle().readBigUInt64LE(0));
   registerAppBar(hwnd);
+  docked = true;
   dock();
   win.loadFile(path.join(__dirname, "..", "mockup", "index.html"), { query: { app: "1" } });
 }
@@ -99,26 +115,25 @@ app.whenReady().then(() => {
   tray.setToolTip("BPO Time");
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      { label: "Show panel", click: restore },
       { label: "Open portal", click: () => shell.openExternal(PORTAL_URL) },
       { type: "separator" },
       { label: "Quit BPO Time", click: quit },
     ])
   );
 
-  ipcMain.on("panel:collapsed", (_e, value: boolean) => {
-    collapsed = value;
-    dock();
-  });
+  ipcMain.on("panel:minimize", minimize);
+  tray.on("click", () => (docked ? minimize() : restore()));
   ipcMain.on("portal:open", () => shell.openExternal(PORTAL_URL));
   ipcMain.on("app:quit", quit);
 
   // Monitor plugged in, resolution or scale changed: take the edge again.
-  screen.on("display-metrics-changed", dock);
+  screen.on("display-metrics-changed", () => docked && dock());
 });
 
 // Give the screen space back to Windows when we exit, otherwise it stays reserved until sign-out.
 app.on("before-quit", () => {
-  if (hwnd) removeAppBar(hwnd);
+  if (hwnd && docked) removeAppBar(hwnd);
 });
 
 app.on("window-all-closed", () => app.quit());
