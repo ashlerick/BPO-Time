@@ -114,6 +114,8 @@ Rules:
 - A **Desktop app** button sits at the top-right of the portal next to the clocks, on a PC only (hidden
   on phones and tablets, on non-Windows computers, and inside the app itself).
 - It downloads the installer from the **app repo's** GitHub Releases (`BPO-Time-Setup.exe`).
+- The button carries a **Beta** badge while the app is in beta. Remove the badge in
+  `DesktopAppButton.tsx` when it is released properly.
 - It is already built (`frontend/src/components/ui/DesktopAppButton.tsx`) but **hidden** until the first
   release exists. To switch it on: publish the installer, then set `DESKTOP_APP_URL` to that repo's release asset and `DESKTOP_APP_READY = true` in that file.
 
