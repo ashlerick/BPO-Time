@@ -1,14 +1,14 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
 import * as path from "path";
 import * as zlib from "zlib";
-import { registerAppBar, removeAppBar, setAppBarWidth } from "./appbar";
+import { sendToBottom } from "./winpos";
 
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
 const WIDTH = 300; // DIPs
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let docked = false;
+let shown = true;
 let hwnd = 0;
 
 function crc32(buf: Buffer): number {
@@ -89,38 +89,27 @@ function trayIcon(): Electron.NativeImage {
   return nativeImage.createFromBuffer(png, { scaleFactor: 2 });
 }
 
-// Reserve the right edge of the primary monitor and size the window to it. The AppBar API works in
-// physical pixels, Electron in DIPs, so convert both ways.
-function dock(): void {
+// Full height of the right side of the main monitor, above the taskbar. Nothing is reserved, so desktop
+// icons stay where they are and apps can be placed over the panel.
+function place(): void {
   if (!win) return;
-  const display = screen.getPrimaryDisplay();
-  const monitor = screen.dipToScreenRect(null, display.bounds);
-  const width = Math.round(WIDTH * display.scaleFactor);
-  const rc = setAppBarWidth(hwnd, {
-    left: monitor.x,
-    top: monitor.y,
-    right: monitor.x + monitor.width,
-    bottom: monitor.y + monitor.height,
-  }, width);
-  win.setBounds(
-    screen.screenToDipRect(null, { x: rc.left, y: rc.top, width: rc.right - rc.left, height: rc.bottom - rc.top })
-  );
+  const area = screen.getPrimaryDisplay().workArea;
+  win.setBounds({ x: area.x + area.width - WIDTH, y: area.y, width: WIDTH, height: area.height });
+  sendToBottom(hwnd);
 }
 
-// Minimize: hide the panel and give the screen space back. Restoring takes the edge again.
 function minimize(): void {
-  if (!win || !docked) return;
-  removeAppBar(hwnd);
-  docked = false;
+  if (!win || !shown) return;
+  shown = false;
   win.hide();
 }
 
 function restore(): void {
-  if (!win || docked) return;
-  registerAppBar(hwnd);
-  docked = true;
-  dock();
-  win.show();
+  if (!win || shown) return;
+  shown = true;
+  place();
+  win.showInactive();
+  sendToBottom(hwnd);
 }
 
 function quit(): void {
@@ -133,7 +122,8 @@ function createWindow(): void {
     frame: false,
     resizable: false,
     movable: false,
-    alwaysOnTop: true,
+    focusable: false, // clicking it never raises it above the app you are working in
+    alwaysOnTop: false,
     skipTaskbar: true,
     backgroundColor: "#1a212b",
     webPreferences: {
@@ -143,9 +133,12 @@ function createWindow(): void {
     },
   });
   hwnd = Number(win.getNativeWindowHandle().readBigUInt64LE(0));
-  registerAppBar(hwnd);
-  docked = true;
-  dock();
+  place();
+  win.on("minimize", () => {
+    // Win+D (Show desktop) minimizes every window; the panel stays. Our own minimize uses hide().
+    win?.showInactive();
+    sendToBottom(hwnd);
+  });
   win.loadFile(path.join(__dirname, "..", "mockup", "index.html"), { query: { app: "1" } });
 }
 
@@ -164,17 +157,12 @@ app.whenReady().then(() => {
   );
 
   ipcMain.on("panel:minimize", minimize);
-  tray.on("click", () => (docked ? minimize() : restore()));
+  tray.on("click", () => (shown ? minimize() : restore()));
   ipcMain.on("portal:open", () => shell.openExternal(PORTAL_URL));
   ipcMain.on("app:quit", quit);
 
   // Monitor plugged in, resolution or scale changed: take the edge again.
-  screen.on("display-metrics-changed", () => docked && dock());
-});
-
-// Give the screen space back to Windows when we exit, otherwise it stays reserved until sign-out.
-app.on("before-quit", () => {
-  if (hwnd && docked) removeAppBar(hwnd);
+  screen.on("display-metrics-changed", () => shown && place());
 });
 
 app.on("window-all-closed", () => app.quit());
