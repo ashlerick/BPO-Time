@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, Menu, nativeImage, screen, shell, Tray } f
 import * as path from "path";
 import * as zlib from "zlib";
 import { desktopState, sendToBottom, sendToTop } from "./winpos";
+import * as auth from "./auth";
 
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
 const WIDTH = 300; // DIPs
@@ -137,6 +138,11 @@ function keepAboveShownDesktop(): void {
   }
 }
 
+function signOut(): void {
+  auth.signOut();
+  win?.webContents.send("toast", "Signed out of this PC.", false);
+}
+
 function quit(): void {
   app.quit();
 }
@@ -179,27 +185,39 @@ if (process.defaultApp && process.argv.length >= 2) {
   app.setAsDefaultProtocolClient(PROTOCOL);
 }
 
-// Only "bpotime://open" is understood so far. Never log the whole link: later it will carry a one-time code.
+function toast(message: string, error = false): void {
+  win?.webContents.send("toast", message, error);
+}
+
+// A link is text from any web page, so only a short allowlist of actions is honoured, and nothing in it
+// is used to open files, run commands or visit addresses. The whole link is never logged because
+// "connect" carries a one-time code.
 function handleLink(argv: string[]): void {
   const link = argv.find((a) => a.startsWith(PROTOCOL + "://"));
   if (!link) return raise();
-  let host = "";
+  let url: URL;
   try {
-    host = new URL(link).hostname;
+    url = new URL(link);
   } catch {
     return raise();
   }
-  if (host === "open") raise();
+  raise();
+  if (url.hostname === "connect") {
+    void auth.connect(url.searchParams.get("code")).then((r) => toast(r.message, !r.ok));
+  }
 }
 
 // A second launch (Start menu, or the portal's button) hands over to the running panel instead.
-if (!app.requestSingleInstanceLock()) {
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
   app.quit();
 } else {
   app.on("second-instance", (_e, argv) => handleLink(argv));
 }
 
 app.whenReady().then(() => {
+  // The second launch is on its way out: it must not create a window or touch the sign-in.
+  if (!gotLock) return;
   createWindow();
 
   tray = new Tray(trayIcon());
@@ -208,6 +226,7 @@ app.whenReady().then(() => {
     Menu.buildFromTemplate([
       { label: "Show panel", click: raise },
       { label: "Open portal", click: () => shell.openExternal(PORTAL_URL) },
+      { label: "Sign out of this PC", click: signOut },
       { type: "separator" },
       { label: "Quit BPO Time", click: quit },
     ])
@@ -218,6 +237,14 @@ app.whenReady().then(() => {
   tray.on("double-click", raise);
   ipcMain.on("portal:open", () => shell.openExternal(PORTAL_URL));
   ipcMain.on("app:quit", quit);
+  ipcMain.handle("auth:get", () => auth.getState());
+  ipcMain.on("auth:signout", signOut);
+  auth.onChange((s) => win?.webContents.send("auth:state", s));
+
+  // Signed in already? Verify quietly. Started by a bpotime:// link? Handle it once we know that.
+  void auth.restore().then(() => {
+    if (process.argv.some((a) => a.startsWith(PROTOCOL + "://"))) handleLink(process.argv);
+  });
 
   // Monitor plugged in, resolution or scale changed: take the edge again.
   setInterval(keepAboveShownDesktop, 250);

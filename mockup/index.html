@@ -41,8 +41,14 @@
   .clock .lbl { font-size: 12px; color: var(--muted); }
   .week { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 10px; background: var(--bg); border-radius: 8px; }
   .week span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
-  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .actions .main { grid-column: 1 / -1; }
+  .actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .slide { position: relative; height: 46px; border-radius: 8px; background: var(--bad); color: #fff; overflow: hidden;
+    user-select: none; touch-action: none; }
+  .slide-label { position: absolute; inset: 0; display: grid; place-items: center; padding-left: 40px; font-weight: 600; pointer-events: none; }
+  .slide-knob { position: absolute; top: 4px; left: 4px; width: 38px; height: 38px; border-radius: 6px; background: #fff;
+    color: var(--bad); display: grid; place-items: center; font-size: 26px; line-height: 1; cursor: grab; touch-action: none; }
+  .slide-knob:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .slide.snap .slide-knob { transition: transform .18s ease; }
   button.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 9px 10px;
     border-radius: 8px; font: inherit; cursor: pointer; }
   button.btn:hover:not(:disabled) { border-color: var(--brand); }
@@ -50,6 +56,10 @@
   button.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; padding: 11px; }
   button.danger { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 600; padding: 11px; }
   button.active { background: var(--warn); border-color: var(--warn); color: #fff; }
+  .notice { border: 1px solid var(--line); border-left: 3px solid var(--brand); border-radius: 8px; padding: 10px 12px; font-size: 13px; background: var(--bg); }
+  .notice b { display: block; margin-bottom: 4px; }
+  .notice .btn { margin-top: 8px; width: 100%; }
+  [hidden] { display: none !important; }
   .shift { font-size: 13px; border-left: 3px solid var(--ok); padding: 2px 0 2px 10px; }
   .shift small { color: var(--muted); display: block; }
   .chips { display: flex; gap: 8px; }
@@ -102,14 +112,15 @@
 
   <aside class="panel" id="panel">
     <div class="head">
-      <div class="avatar">JD</div>
+      <div class="avatar" id="avatar">?</div>
       <div class="who">
-        <b>Juan Dela Cruz</b>
+        <b id="who">BPO Time</b>
         <span class="status"><span class="dot" id="dot"></span><span id="statusText">Not clocked in</span></span>
       </div>
       <button class="iconbtn" id="minimize" title="Minimize (send behind your apps)">&#8211;</button>
     </div>
     <div class="body">
+      <div class="notice" id="notice" hidden></div>
       <div class="clock">
         <div class="big" id="today">0:00:00</div>
         <div class="lbl">worked today</div>
@@ -117,8 +128,11 @@
       <div class="week"><span>This week</span><span id="week">31:42</span></div>
       <div class="actions">
         <button class="btn primary main" id="clock">Clock in</button>
-        <button class="btn" id="brk" disabled>Break</button>
-        <button class="btn" id="lunch" disabled>Lunch</button>
+        <div class="slide" id="slide" hidden>
+          <span class="slide-label">Slide to clock out</span>
+          <div class="slide-knob" id="knob" tabindex="0" role="slider" aria-label="Slide to clock out"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">&#8250;</div>
+        </div>
       </div>
       <div class="shift" id="shift">Shift 9:00 PM - 6:00 AM<small id="late">Not started yet</small></div>
       <div class="chips">
@@ -130,7 +144,7 @@
     <div class="drawer" id="drawer">
       <h3>What this app records about you</h3>
       <ul>
-        <li>When you clock in, out, break or lunch</li>
+        <li>When you clock in and out</li>
         <li>5-minute blocks marked <i>active</i> or <i>idle</i></li>
       </ul>
       <h3 class="no">What it never records</h3>
@@ -141,7 +155,7 @@
 
     <div class="foot">
       <span class="sync"><span class="dot" id="syncDot" style="background:var(--ok)"></span><span id="syncText">Synced</span></span>
-      <span><a id="priv">What's recorded</a> &middot; <a id="portal">Open portal</a></span>
+      <span><a id="priv">What's recorded</a> &middot; <span id="soWrap" hidden><a id="signout">Sign out</a> &middot; </span><a id="portal">Open portal</a></span>
     </div>
   </aside>
 </div>
@@ -150,7 +164,7 @@
 <script>
   const $ = id => document.getElementById(id);
   const s = { state: 'out', workedMs: 0, idle: false, offline: false, queued: 0, speed: 1, last: Date.now(), weekBaseMs: (31*60+42)*60000 };
-  const COLORS = { out: 'var(--muted)', in: 'var(--ok)', break: 'var(--warn)', lunch: 'var(--warn)', idle: 'var(--idle)' };
+  const COLORS = { out: 'var(--muted)', in: 'var(--ok)', idle: 'var(--idle)' };
 
   const hms = ms => { const t = Math.floor(ms/1000), h = Math.floor(t/3600), m = Math.floor(t%3600/60), x = t%60;
     return h + ':' + String(m).padStart(2,'0') + ':' + String(x).padStart(2,'0'); };
@@ -161,18 +175,47 @@
     $('toasts').appendChild(t); setTimeout(() => t.remove(), 3500);
   }
 
+  // Sign-in state. In a plain browser (design preview) it stays "signed in" with the demo name.
+  const auth = { signedIn: true, name: 'Juan Dela Cruz' };
+  const initials = n => n.split(/s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+
+  function applyAuth(a) {
+    const notice = $('notice');
+    auth.signedIn = a.status === 'signedIn';
+    if (a.status === 'signedIn') {
+      auth.name = a.user.name;
+      $('who').textContent = a.user.name;
+      $('avatar').textContent = initials(a.user.name);
+      notice.hidden = !a.offline;
+      if (a.offline) notice.innerHTML = '<b>Offline</b>Can\x27t reach the portal. Your sign-in is kept and will be checked again shortly.';
+    } else if (a.status === 'checking') {
+      $('who').textContent = 'Signing in...';
+      $('avatar').textContent = '...';
+      notice.hidden = true;
+    } else {
+      $('who').textContent = 'Not signed in';
+      $('avatar').textContent = '?';
+      notice.hidden = false;
+      notice.innerHTML = '<b>Connect your account</b>' + (a.message ? a.message + ' ' : '') +
+        'Open the BPO Portal and press <b style="display:inline">Launch App (BETA)</b> to sign this PC in.' +
+        '<button class="btn primary" id="noticePortal">Open the portal</button>';
+      $('noticePortal').onclick = () => window.bpoTime ? window.bpoTime.openPortal() : toast('This would open the portal.');
+    }
+    $('soWrap').hidden = !auth.signedIn || !window.bpoTime;
+    render();
+  }
+
   function render() {
     const eff = s.idle && s.state === 'in' ? 'idle' : s.state;
-    const label = { out: 'Not clocked in', in: 'Clocked in', break: 'On break', lunch: 'On lunch', idle: 'Idle - timer paused' }[eff];
+    const label = { out: 'Not clocked in', in: 'Clocked in', idle: 'Idle - timer paused' }[eff];
     $('statusText').textContent = label;
     for (const id of ['dot']) $(id).style.background = COLORS[eff];
     $('today').textContent = hms(s.workedMs);
     $('week').textContent = hm(s.weekBaseMs + s.workedMs);
-    const c = $('clock');
-    c.textContent = s.state === 'out' ? 'Clock in' : (s.state === 'in' ? 'Clock out' : 'Resume work');
-    c.className = 'btn main ' + (s.state === 'in' ? 'danger' : 'primary');
-    $('brk').disabled = s.state !== 'in';
-    $('lunch').disabled = s.state !== 'in';
+    // Clock in is a button. Clock out is a slider, so it cannot be pressed by accident.
+    $('clock').hidden = s.state === 'in';
+    $('slide').hidden = s.state !== 'in' || !auth.signedIn;
+    $('clock').disabled = !auth.signedIn;
     $('syncDot').style.background = s.offline ? 'var(--warn)' : 'var(--ok)';
     $('syncText').textContent = s.offline ? 'Offline - ' + s.queued + ' block(s) queued' : 'Synced';
   }
@@ -188,13 +231,33 @@
   }
 
   $('clock').onclick = () => {
-    if (s.state === 'out') { s.state = 'in'; toast('Clocked in. Your time is now being counted.'); $('late').textContent = 'On time (in at 8:57 PM)'; }
-    else if (s.state === 'in') { s.state = 'out'; toast('Clocked out. You worked ' + hm(s.workedMs) + ' today.'); }
-    else { s.state = 'in'; toast('Back to work. Timer running.'); }
+    s.state = 'in'; toast('Clocked in. Your time is now being counted.'); $('late').textContent = 'On time (in at 8:57 PM)';
     render();
   };
-  $('brk').onclick = () => { s.state = 'break'; toast('Break started. Timer paused.'); render(); };
-  $('lunch').onclick = () => { s.state = 'lunch'; toast('Lunch started. Timer paused.'); render(); };
+
+  // Slide to clock out. Letting go before the end snaps back and does nothing.
+  (function () {
+    const slide = $('slide'), knob = $('knob');
+    let startX = 0, pos = 0, dragging = false;
+    const max = () => slide.clientWidth - knob.offsetWidth - 8;
+    const move = x => { pos = Math.max(0, Math.min(max(), x)); knob.style.transform = 'translateX(' + pos + 'px)';
+      knob.setAttribute('aria-valuenow', Math.round(pos / max() * 100)); };
+    const done = () => { s.state = 'out'; toast('Clocked out. You worked ' + hm(s.workedMs) + ' today.'); move(0); render(); };
+    const release = () => {
+      if (!dragging) return; dragging = false;
+      if (pos >= max() * 0.95) return done();
+      slide.classList.add('snap'); move(0); setTimeout(() => slide.classList.remove('snap'), 220);
+    };
+    knob.addEventListener('pointerdown', e => { dragging = true; startX = e.clientX - pos; slide.classList.remove('snap'); knob.setPointerCapture(e.pointerId); });
+    knob.addEventListener('pointermove', e => { if (dragging) move(e.clientX - startX); });
+    knob.addEventListener('pointerup', release);
+    knob.addEventListener('pointercancel', release);
+    // Keyboard: Right arrow moves it along in steps; at the end it confirms. Escape or Left backs off.
+    knob.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') { move(pos + max() / 4); if (pos >= max() * 0.95) done(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'Escape') move(0);
+    });
+  })();
   $('minimize').onclick = () => {
     if (window.bpoTime) window.bpoTime.minimize();
     else toast('In the app this sends the panel behind your other windows. Open it again from the tray.');
@@ -223,7 +286,13 @@
     panel.insertBefore(sim, document.querySelector('.foot'));
     document.querySelector('.stage').appendChild(panel);
     document.querySelector('.desk').remove();
-    window.bpoTime && ($('portal').onclick = () => window.bpoTime.openPortal());
+    if (window.bpoTime) {
+      $('portal').onclick = () => window.bpoTime.openPortal();
+      $('signout').onclick = () => window.bpoTime.signOut();
+      window.bpoTime.onAuth(applyAuth);
+      window.bpoTime.onToast(toast);
+      window.bpoTime.getAuth().then(applyAuth);
+    }
   }
   setInterval(tick, 250);
   render();

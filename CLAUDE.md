@@ -46,7 +46,7 @@ product from the portal and has its own repo, deliberately.
 
 - **Technology:** Electron + TypeScript (recommended; same stack as the portal). Tauri is the lighter
   alternative. Windows only for v1.
-- **Panel:** name and status, today's time (large), week total, Clock in/out, Break, Lunch, shift and
+- **Panel:** name and status, today's time (large), week total, Clock in, slide to clock out, shift and
   lateness, unread notifications and to-dos due, sync indicator, collapse to a thin bar, tray icon,
   auto-start with Windows.
 - **Docking:** v1 is an always-on-top frameless window at the screen edge; true docking (reserving

@@ -26,7 +26,7 @@ hour from an hour away from the desk, and has no breaks.
 
 - Name and status: Clocked in / On break / Idle.
 - Time worked today (large), and this week's total.
-- Buttons: Clock in or out, Break, Lunch.
+- Buttons: Clock in, and a slide to clock out (so it cannot be pressed by accident). No break or lunch buttons.
 - Today's shift and whether the person is on time (from the existing shift schedules).
 - Unread notifications and to-dos due today.
 - A link that opens the portal.
