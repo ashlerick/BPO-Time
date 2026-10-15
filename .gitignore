@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# build and packaging output
+dist/
+out/
+release/
+build/
+*.exe
+*.msi
+*.blockmap
+
+# secrets: never commit these (signing certificates, tokens, env files)
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+
+# editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
