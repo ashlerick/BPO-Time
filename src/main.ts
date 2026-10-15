@@ -5,8 +5,7 @@ import * as zlib from "zlib";
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
 const WIDTH = 300;
 const COLLAPSED_WIDTH = 56;
-const HEIGHT = 640;
-const COLLAPSED_HEIGHT = 130;
+const START_HEIGHT = 560; // replaced by the page as soon as it knows its real height
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -51,7 +50,7 @@ function trayIcon(): Electron.NativeImage {
 function placeAtEdge(): void {
   if (!win) return;
   const area = screen.getPrimaryDisplay().workArea;
-  const height = Math.min(HEIGHT, area.height);
+  const height = Math.min(START_HEIGHT, area.height);
   win.setBounds({ x: area.x + area.width - WIDTH, y: area.y + 40, width: WIDTH, height });
 }
 
@@ -61,10 +60,8 @@ function setCollapsed(collapsed: boolean): void {
   const b = win.getBounds();
   const area = screen.getDisplayMatching(b).workArea;
   const width = collapsed ? COLLAPSED_WIDTH : WIDTH;
-  const height = collapsed ? COLLAPSED_HEIGHT : Math.min(HEIGHT, area.height);
   const x = b.x + b.width - width;
-  const y = Math.min(b.y, area.y + area.height - height);
-  win.setBounds({ x, y, width, height });
+  win.setBounds({ x, y: b.y, width, height: b.height });
 }
 
 function createWindow(): void {
@@ -110,6 +107,15 @@ app.whenReady().then(() => {
   tray.on("click", () => (win?.isVisible() ? win.hide() : win?.show()));
 
   ipcMain.on("panel:collapsed", (_e, collapsed: boolean) => setCollapsed(collapsed));
+  // The page reports its content height so the window always fits it exactly, with no scrollbar.
+  ipcMain.on("panel:height", (_e, height: number) => {
+    if (!win || !Number.isFinite(height) || height < 40) return;
+    const b = win.getBounds();
+    const area = screen.getDisplayMatching(b).workArea;
+    const h = Math.min(Math.round(height), area.height);
+    const y = Math.min(b.y, area.y + area.height - h);
+    win.setBounds({ x: b.x, y, width: b.width, height: h });
+  });
   ipcMain.on("panel:minimize", () => win?.minimize());
   ipcMain.on("portal:open", () => shell.openExternal(PORTAL_URL));
   ipcMain.on("app:quit", () => { quitting = true; app.quit(); });
