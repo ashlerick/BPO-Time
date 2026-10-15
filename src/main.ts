@@ -104,12 +104,14 @@ function minimize(): void {
   win.hide();
 }
 
-function restore(): void {
-  if (!win || shown) return;
+// Bring the panel in front of the other apps (from the tray). It drops back behind them as soon as you
+// click another window, because it is not "always on top".
+function raise(): void {
+  if (!win) return;
   shown = true;
   place();
   win.showInactive();
-  sendToBottom(hwnd);
+  win.moveTop();
 }
 
 function quit(): void {
@@ -121,6 +123,7 @@ function createWindow(): void {
     width: WIDTH,
     frame: false,
     resizable: false,
+    minimizable: false, // Windows skips non-minimizable windows on Win+D (Show desktop)
     movable: false,
     focusable: false, // clicking it never raises it above the app you are working in
     alwaysOnTop: false,
@@ -149,7 +152,7 @@ app.whenReady().then(() => {
   tray.setToolTip("BPO Time");
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: "Show panel", click: restore },
+      { label: "Show panel", click: raise },
       { label: "Open portal", click: () => shell.openExternal(PORTAL_URL) },
       { type: "separator" },
       { label: "Quit BPO Time", click: quit },
@@ -157,7 +160,7 @@ app.whenReady().then(() => {
   );
 
   ipcMain.on("panel:minimize", minimize);
-  tray.on("click", () => (shown ? minimize() : restore()));
+  tray.on("click", raise);
   ipcMain.on("portal:open", () => shell.openExternal(PORTAL_URL));
   ipcMain.on("app:quit", quit);
 
