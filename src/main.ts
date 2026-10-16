@@ -234,6 +234,10 @@ function handleLink(argv: string[]): void {
 }
 
 // A second launch (Start menu, or the portal's button) hands over to the running panel instead.
+// A run pointed at a test server (npm run start:staging) keeps its own sign-in and settings in a separate folder, so it
+// can never overwrite the real portal's token or the installed app's data.
+if (!app.isPackaged && process.env.BPO_API_BASE) app.setPath("userData", path.join(app.getPath("appData"), "bpo-time-staging"));
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -264,7 +268,7 @@ app.whenReady().then(() => {
   buildTrayMenu();
 
   // Updates (released builds only): a newer version downloads in the background and installs on the next restart.
-  ipcMain.handle("app:version", () => ({ version: app.getVersion(), updateReady: updates.ready() }));
+  ipcMain.handle("app:version", () => ({ version: app.getVersion(), updateReady: updates.ready(), testServer: auth.testServerHost() }));
   ipcMain.on("update:install", () => updates.installNow());
   updates.start((version) => {
     buildTrayMenu();
@@ -299,8 +303,30 @@ app.whenReady().then(() => {
   ipcMain.handle("counts:get", () => counts.get());
   attendance.onChange((a) => win?.webContents.send("attendance:state", a));
   ipcMain.handle("attendance:get", () => attendance.get());
-  ipcMain.handle("attendance:clockIn", () => attendance.clockIn());
-  ipcMain.handle("attendance:clockOut", () => attendance.clockOut());
+  // Clocking in copies "Good morning, clock in!" and clocking out copies "Good night, clock out!" (same on/off switch as
+  // the break messages). Only when this press really changed something: pressing again while already in, or out, copies nothing.
+  ipcMain.handle("attendance:clockIn", async (_e, copy: unknown) => {
+    const before = attendance.get();
+    const wasIn = !!(before && "checkedIn" in before && before.checkedIn);
+    const r = await attendance.clockIn();
+    if (r.ok && copy === true && !wasIn) {
+      const text = "Good morning, clock in!";
+      clipboard.writeText(text);
+      return { ok: true, message: `${r.message} Copied “${text}” to your clipboard.` };
+    }
+    return r;
+  });
+  ipcMain.handle("attendance:clockOut", async (_e, copy: unknown) => {
+    const before = attendance.get();
+    const wasOut = !!(before && "checkedOut" in before && before.checkedOut);
+    const r = await attendance.clockOut();
+    if (r.ok && copy === true && !wasOut) {
+      const text = "Good night, clock out!";
+      clipboard.writeText(text);
+      return { ok: true, message: `${r.message} Copied “${text}” to your clipboard.` };
+    }
+    return r;
+  });
   // Starting a break can also copy a short message ("Taking my break" / "Taking my lunch") for pasting into a chat.
   // It is copied only after the portal has accepted the break, and only when the person has that switched on.
   ipcMain.handle("attendance:startBreak", async (_e, slot: unknown, copy: unknown) => {

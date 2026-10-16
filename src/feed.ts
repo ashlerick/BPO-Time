@@ -5,7 +5,7 @@
 import * as auth from "./auth";
 
 export interface Feed {
-  announcements: Array<{ id: string; title: string; category: string; preview: string; publishAt: string }>;
+  announcements: Array<{ id: string; title: string; category: string; preview: string; publishAt: string; featured?: boolean; needsAck?: boolean }>;
   birthdays: Array<{ name: string; firstName: string; isMe: boolean }>;
 }
 

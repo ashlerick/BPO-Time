@@ -7,8 +7,15 @@ import * as os from "os";
 import * as path from "path";
 
 const PROD_API_BASE = "https://backend-xi-six-41.vercel.app/api";
-// Our own constant. Never taken from a link. A test server may be named only when running from source.
-const API_BASE = !app.isPackaged && process.env.BPO_API_BASE ? process.env.BPO_API_BASE : PROD_API_BASE;
+// Our own constant. Never taken from a link. A test server may be named only when running from source, and only as
+// an https address (or localhost).
+const TEST_BASE = !app.isPackaged ? (process.env.BPO_API_BASE ?? "").replace(/\/+$/, "") : "";
+const API_BASE = /^(https:\/\/|http:\/\/localhost)/.test(TEST_BASE) ? TEST_BASE : PROD_API_BASE;
+
+/** The test server this run talks to, or null on the real portal. The panel shows a TEST pill when it is not null. */
+export function testServerHost(): string | null {
+  return API_BASE === PROD_API_BASE ? null : new URL(API_BASE).host;
+}
 
 const CODE_PATTERN = /^[A-Za-z0-9_-]{20,100}$/;
 const TIMEOUT_MS = 10_000;

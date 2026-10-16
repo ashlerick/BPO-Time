@@ -43,6 +43,7 @@
   .whoami:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
   .whoami:disabled { cursor: default; }
   .whoami:disabled::after { display: none; }
+  .testpill { margin-left: 6px; padding: 1px 6px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .06em; color: #1b1300; background: var(--warn); }
   .who { min-width: 0; flex: 1; }
   .who b { display: block; font-size: 15px; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .status { font-size: 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
@@ -55,6 +56,12 @@
   .clock { text-align: center; }
   .clock .big { font-size: 44px; font-weight: 300; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
   .dayname { font-size: 11px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  /* the shift under the timer: its hours in Philippines time (California on hover) and how the clock-in went */
+  .shiftline { position: relative; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 3px 8px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+  .shiftline[data-tip] { cursor: default; }
+  .sstat { padding: 0 8px; border-radius: 999px; font-weight: 600; }
+  .sstat.ok { color: var(--ok); background: rgba(52,211,153,.14); }
+  .sstat.late { color: #1b1300; background: var(--warn); }
   .clock .lbl { font-size: 12px; color: var(--muted); letter-spacing: .04em; margin-top: 2px; }
   .actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
   .slide { position: relative; height: 48px; border-radius: 999px; background: var(--raise); border: 1px solid var(--line);
@@ -180,6 +187,10 @@
   .ann { text-align: left; font: inherit; color: var(--ink); cursor: pointer; background: var(--raise); border: 1px solid var(--line);
     border-left: 3px solid var(--gold); border-radius: 10px; padding: 9px 12px; }
   .ann small { display: block; color: var(--muted); font-size: 11px; }
+  /* highlighted by HR (or an emergency): gold all round, and the category line in gold */
+  .ann.hot { border-color: rgba(251,191,36,.55); background: rgba(251,191,36,.08); }
+  .ann.hot small { color: var(--gold); font-weight: 600; }
+  .ann .need { display: inline-block; align-self: flex-start; margin-top: 5px; padding: 1px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .02em; color: #1b1300; background: var(--warn); }
   .ann b { display: block; font-size: 13px; margin: 1px 0 2px; }
   .ann span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); font-size: 12px; }
   .foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
@@ -187,7 +198,8 @@
     background: var(--raise); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; }
   .morebtn:hover, .morebtn[aria-expanded="true"] { border-color: var(--brand-hi); background: var(--panel); }
   .morebtn:focus-visible, .menu .item:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
-  .menu { position: absolute; right: 12px; bottom: 50px; z-index: 5; min-width: 190px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  /* above the lifted (hovered) cards and tooltips, which sit at z-index 40 */
+  .menu { position: absolute; right: 12px; bottom: 50px; z-index: 60; min-width: 190px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
     background: var(--raise); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
   .menu .item { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 0;
     border-radius: 8px; padding: 9px 10px; cursor: pointer; }
@@ -200,7 +212,7 @@
   .sync { display: inline-flex; align-items: center; gap: 6px; }
 
 
-  .drawer { position: absolute; left: 12px; right: 12px; bottom: 50px; z-index: 4; padding: 14px; font-size: 13px; display: none;
+  .drawer { position: absolute; left: 12px; right: 12px; bottom: 50px; z-index: 59; padding: 14px; font-size: 13px; display: none;
     border: 1px solid var(--line); border-radius: 12px; background: var(--raise); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
   .drawer.open { display: block; }
   .drawer h3 { margin: 0 0 6px; font-size: 13px; }
@@ -247,7 +259,7 @@
         <div class="avatar" id="avatar">?</div>
         <div class="who">
           <b id="who">BPO Time</b>
-          <span class="status"><span class="dot" id="dot"></span><span id="statusText">Not clocked in</span></span>
+          <span class="status"><span class="dot" id="dot"></span><span id="statusText">Not clocked in</span><span class="testpill" id="testpill" hidden>TEST</span></span>
         </div>
       </button>
       <button class="iconbtn" id="minimize" data-tip="Minimize (send behind your apps)" data-tip-pos="below" data-tip-align="end" aria-label="Minimize"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg></button>
@@ -264,6 +276,7 @@
         <div class="dayname" id="dayName"></div>
         <div class="big" id="today">0:00:00</div>
         <div class="lbl" id="lbl">worked today</div>
+        <div class="shiftline" id="shiftline" hidden></div>
       </div>
       <div class="actions">
         <button class="btn primary main" id="clock">Clock in</button>
@@ -316,7 +329,7 @@
         <button class="item" id="priv" type="button" role="menuitem">What's recorded</button>
         <button class="item" id="portal" type="button" role="menuitem">Open portal</button>
         <button class="item" id="themeBtn" type="button" role="menuitem">Switch to light mode</button>
-        <button class="item" id="copyBtn" type="button" role="menuitemcheckbox" aria-checked="true">Copy break message: On</button>
+        <button class="item" id="copyBtn" type="button" role="menuitemcheckbox" aria-checked="true">Copy chat messages: On</button>
         <button class="item" id="updateBtn" type="button" role="menuitem" hidden>Restart to update</button>
         <span id="soWrap" hidden><button class="item danger-item" id="signout" type="button" role="menuitem">Sign out of this PC</button></span>
         <div class="ver" id="ver" hidden></div>
@@ -364,13 +377,16 @@
   // Announcements and today's birthdays from the portal. Text is set with textContent only:
   // it is written by other people, so it must never be treated as HTML.
   const CONFETTI = ['#fbbf24', '#34d399', '#f472b6', '#60a5fa', '#a78bfa'];
+  let lastFeed = null;
   function paintFeed(f) {
+    lastFeed = f;
     const people = (f && f.birthdays) || [];
     const bday = $('bday');
     bday.replaceChildren();
     // The x hides today's banner on this PC; it comes back tomorrow, or if someone else's birthday is added.
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
-    const sig = today + '|' + people.map(p => p.name).join(',');
+    // Hidden for this date and this clock-in: clocking in again (the next night's shift) brings it back while it is still the birthday.
+    const sig = today + '|' + people.map(p => p.name).join(',') + '|' + ((s.att && s.att.checkInAt) || '');
     let dismissed = false;
     try { dismissed = localStorage.getItem('bpotime:bday-dismissed') === sig; } catch (e) { /* storage blocked: shows every time */ }
     bday.hidden = people.length === 0 || dismissed;
@@ -408,10 +424,13 @@
     $('newsWrap').hidden = items.length === 0;
     for (const a of items) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'ann'; b.dataset.tip = 'Open in the portal'; b.dataset.tipPos = 'inside';
-      const cat = document.createElement('small'); cat.textContent = a.category;
+      const cat = document.createElement('small'); cat.textContent = (a.featured ? '★ Highlighted · ' : '') + a.category;
+      if (a.featured) b.classList.add('hot');
       const title = document.createElement('b'); title.textContent = a.title;
       const prev = document.createElement('span'); prev.textContent = a.preview;
       b.append(cat, title, prev);
+      // a notice that asks for a "Got it" which this person has not given yet
+      if (a.needsAck) { const need = document.createElement('span'); need.className = 'need'; need.textContent = 'Needs your Got it'; b.append(need); }
       b.onclick = () => window.bpoTime ? window.bpoTime.openPortal('announcements', a.id) : toast('This would open the announcement in the portal.');
       news.appendChild(b);
     }
@@ -452,6 +471,7 @@
     for (const id of ['dot']) $(id).style.background = COLORS[eff];
     $('today').textContent = hms(s.workedMs);
     paintBreaks();
+    paintShift();
     // Clock in is a button. Clock out is a slider, so it cannot be pressed by accident.
     const done = !!(s.att && s.att.checkedOut);
     $('clock').hidden = s.state === 'in';
@@ -482,6 +502,7 @@
     s.att = a ? Object.assign({}, a, { receivedAt: Date.now() }) : null;
     syncFromAttendance();
     render();
+    if (lastFeed) paintFeed(lastFeed);   // a new clock-in changes what "dismissed" means for the birthday banner
   }
   // Fixed deduction: a slot that is taken (ended) or not taken takes off its full allowance; the slot running now
   // takes off no more than its allowance, so going over is only a flag and the timer resumes after the limit.
@@ -499,6 +520,42 @@
   const SLOTS = ['morning', 'lunch', 'afternoon'];
   let armedSlot = null, armTimer = null;
 
+  // The shift, from the portal: its hours, and (once clocked in) whether you were on time. Lateness comes from the portal,
+  // worked out by the same function as HR's late report, so the two always agree. Early counts as on time.
+  const phClock = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' });
+  const caClock = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' });
+  const spanOf = ms => { const m = Math.max(0, Math.round(ms / 60000)); const h = Math.floor(m / 60); return h ? h + 'h ' + (m % 60) + 'm' : m + 'm'; };
+  function paintShift() {
+    const el = $('shiftline'), a = s.att, sh = a && a.shift;
+    if (!live || !sh) { el.hidden = true; return; }
+    el.hidden = false;
+    const start = new Date(sh.startAt), end = new Date(sh.endAt);
+    const now = new Date(a.serverNow).getTime() + (Date.now() - a.receivedAt);
+    const parts = [];
+    const text = t => { const x = document.createElement('span'); x.textContent = t; return x; };
+    const pill = (t, cls) => { const x = text(t); x.className = 'sstat ' + cls; return x; };
+    if (!sh.workDay) {
+      parts.push(text('Day off'));
+      el.removeAttribute('data-tip');
+    } else {
+      parts.push(text('Shift ' + phClock.format(start) + ' – ' + phClock.format(end) + ' PH'));
+      el.dataset.tip = caClock.format(start) + ' – ' + caClock.format(end) + ' CA';
+      el.dataset.tipPos = 'below';
+      const graceEnd = start.getTime() + (sh.graceMinutes || 0) * 60000;
+      if (a.checkedIn) {
+        parts.push(sh.lateMinutes > 0 ? pill('Late by ' + sh.lateMinutes + ' min', 'late') : pill('On time', 'ok'));
+        if (!a.checkedOut) parts.push(text(now < end.getTime() ? 'ends in ' + spanOf(end.getTime() - now) : 'shift ended'));
+      } else if (now < start.getTime()) {
+        parts.push(text('starts in ' + spanOf(start.getTime() - now)));
+      } else if (now <= graceEnd) {
+        parts.push(text('clock in by ' + phClock.format(new Date(graceEnd)) + ' to be on time'));
+      } else if (now < end.getTime()) {
+        parts.push(pill('started ' + spanOf(now - start.getTime()) + ' ago', 'late'));
+      }
+    }
+    el.replaceChildren(...parts);
+  }
+
   // The tooltip says what the break is while it is available, and what happened once it is not.
   const SLOT_FULL = { morning: 'Morning break', lunch: 'Lunch', afternoon: 'Afternoon break' };
   function breakTip(slot, e, allow, grace, entries) {
@@ -511,7 +568,7 @@
     if (!e.endedAt) return 'Tap to end ' + (slot === 'lunch' ? 'lunch' : 'your break');
     const secs = Math.round((new Date(e.endedAt) - new Date(e.startedAt)) / 1000);
     if (e.overSeconds > grace) return 'Taken \u00b7 ' + mmss(secs) + ', ' + mmss(e.overSeconds) + ' over';
-    return 'Taken \u00b7 ' + mmss(secs) + (secs > allow ? ', within the grace' : '');
+    return 'Taken \u00b7 ' + mmss(secs);
   }
 
   // The three break buttons: a countdown while running (red and counting up past the limit), a result afterwards.
@@ -593,7 +650,7 @@
   $('clock').onclick = () => {
     if (live) {
       $('clock').disabled = true;
-      window.bpoTime.clockIn().then(r => toast(r.message, !r.ok));
+      window.bpoTime.clockIn(copyOn).then(r => toast(r.message, !r.ok));
       return;
     }
     s.state = 'in'; toast('Clocked in. Your time is now being counted.');
@@ -649,7 +706,7 @@
     const clockOutNow = () => {
       if (!armed) return;
       stopTimer();
-      if (live) window.bpoTime.clockOut().then(r => toast(r.message, !r.ok));
+      if (live) window.bpoTime.clockOut(copyOn).then(r => toast(r.message, !r.ok));
       else { s.state = 'out'; toast('Clocked out. You worked ' + hm(s.workedMs) + ' today.'); render(); }
       resetSlide();
     };
@@ -700,11 +757,11 @@
   for (const b of document.querySelectorAll('.ql')) {
     b.onclick = () => window.bpoTime ? window.bpoTime.openPortal(b.dataset.page) : toast('This would open ' + b.title + ' in the portal.');
   }
-  // Starting a break copies "Taking my break" / "Taking my lunch", and ending it copies "Back from break" / "Back from lunch",
-  // for pasting into a chat. On by default; it replaces whatever was on the clipboard, so it can be switched off here.
+  // Clocking in copies "Good morning, clock in!", clocking out "Good night, clock out!"; starting a break copies "Taking my break" /
+  // "Taking my lunch", and ending it "Back from break" / "Back from lunch", all for pasting into a chat. On by default; it replaces whatever was on the clipboard, so it can be switched off here.
   let copyOn = true;
   try { copyOn = localStorage.getItem('bpotime:copybreak') !== '0'; } catch (e) { /* storage blocked: stays on */ }
-  const paintCopy = () => { $('copyBtn').textContent = 'Copy break message: ' + (copyOn ? 'On' : 'Off'); $('copyBtn').setAttribute('aria-checked', String(copyOn)); };
+  const paintCopy = () => { $('copyBtn').textContent = 'Copy chat messages: ' + (copyOn ? 'On' : 'Off'); $('copyBtn').setAttribute('aria-checked', String(copyOn)); };
   paintCopy();
   $('copyBtn').onclick = () => {
     copyOn = !copyOn; paintCopy();
@@ -773,7 +830,11 @@
       window.bpoTime.onFeed(paintFeed);
       // version, and "Restart to update" once a newer version has been downloaded
       const showUpdate = v => { if (v) { $('updateBtn').hidden = false; $('updateBtn').textContent = 'Restart to update to ' + v; } };
-      window.bpoTime.appVersion().then(i => { $('ver').hidden = false; $('ver').textContent = 'BPO Time ' + i.version; showUpdate(i.updateReady); });
+      window.bpoTime.appVersion().then(i => {
+        $('ver').hidden = false; $('ver').textContent = 'BPO Time ' + i.version + (i.testServer ? ' \u00b7 test server ' + i.testServer : '');
+        if (i.testServer) { $('testpill').hidden = false; $('testpill').title = 'Talking to a test server: ' + i.testServer + '. Nothing here is on the real portal.'; }
+        showUpdate(i.updateReady);
+      });
       window.bpoTime.onUpdateReady(showUpdate);
       $('updateBtn').onclick = () => window.bpoTime.installUpdate();
       window.bpoTime.getFeed().then(paintFeed);

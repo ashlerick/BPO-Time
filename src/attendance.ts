@@ -15,6 +15,16 @@ export interface Attendance {
   breaks: BreakEntry[];
   /** Seconds allowed per slot, from the portal. */
   breakAllowances: Record<BreakSlot, number>;
+  /** Today's shift, or null when none is assigned. The portal works out lateness with the same function as HR's report. */
+  shift: {
+    name: string;
+    startAt: string;
+    endAt: string;
+    graceMinutes: number;
+    timezone: string;
+    workDay: boolean;
+    lateMinutes: number;
+  } | null;
 }
 
 export type BreakSlot = "morning" | "lunch" | "afternoon";

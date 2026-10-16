@@ -36,6 +36,12 @@ Rules that keep this working:
   the bad one first: people who already updated would be stuck on it.
 - Check `gh auth status` and publish under the owner's repo (`ashlerick/BPO-Time`).
 
+## Trying a version first
+
+To test a new version with a few people before the team gets it, publish a **pre-release** (for example
+`0.2.0-beta.1`): running apps ignore pre-releases. Testing without touching live data (a staging server) is in
+[testing.md](./testing.md).
+
 ## Things to know
 
 - **No code-signing certificate yet.** The installer is unsigned, so Windows SmartScreen shows "Windows protected your

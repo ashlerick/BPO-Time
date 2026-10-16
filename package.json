@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "tsc && node scripts/start.js",
+    "start:staging": "tsc && node scripts/start-staging.js",
     "icon": "node scripts/make-icon.js",
     "dist": "tsc && electron-builder --win --publish never",
     "dist:dir": "tsc && electron-builder --win --dir --publish never"

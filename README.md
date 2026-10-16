@@ -42,7 +42,8 @@ portal's `backend/lib/breaks.ts`, so changing a number or a rule later is a smal
   (`+2:14`). The big "worked today" timer pauses while on a break and, while a break is running, takes
   off at most that slot's allowance.
 - **Chat messages:** starting a break copies `Taking my break` (or `Taking my lunch`) to the clipboard and ending it copies
-  `Back from break` (or `Back from lunch`). It is a switch in More ("Copy break message"), on by default.
+  `Back from break` (or `Back from lunch`). Clocking in copies `Good morning, clock in!` and clocking out copies
+  `Good night, clock out!`. All of these are one switch in More ("Copy chat messages"), on by default.
 - **Server keeps the time.** Starts and ends are recorded by the portal, like clock in and out, so a
   restart or a wrong PC clock cannot change them. Only start and end times are stored.
 - **Not done yet:** the portal's attendance reports and the Excel export still compute hours from

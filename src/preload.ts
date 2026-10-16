@@ -20,8 +20,8 @@ contextBridge.exposeInMainWorld("bpoTime", {
   signOut: () => ipcRenderer.send("auth:signout"),
   getAttendance: () => ipcRenderer.invoke("attendance:get"),
   onAttendance: (fn: (a: unknown) => void) => ipcRenderer.on("attendance:state", (_e, a) => fn(a)),
-  clockIn: () => ipcRenderer.invoke("attendance:clockIn"),
-  clockOut: () => ipcRenderer.invoke("attendance:clockOut"),
+  clockIn: (copy: boolean) => ipcRenderer.invoke("attendance:clockIn", copy),
+  clockOut: (copy: boolean) => ipcRenderer.invoke("attendance:clockOut", copy),
   startBreak: (slot: string, copy: boolean) => ipcRenderer.invoke("attendance:startBreak", slot, copy),
   endBreak: (copy: boolean) => ipcRenderer.invoke("attendance:endBreak", copy),
 });
