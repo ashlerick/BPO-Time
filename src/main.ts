@@ -1,12 +1,18 @@
-import { app, BrowserWindow, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
+import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
 import * as path from "path";
 import * as zlib from "zlib";
-import { desktopState, sendToBottom, sendToTop } from "./winpos";
+import { desktopState, openAppWindows, sendToBottom, sendToTop } from "./winpos";
 import * as auth from "./auth";
 import * as attendance from "./attendance";
+import * as counts from "./counts";
+import * as feed from "./feed";
+import * as updates from "./updates";
 
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
 const WIDTH = 300; // DIPs
+// Pages the panel may open in the portal (quick links, cards). Anything else opens the portal home.
+const PORTAL_PAGES = ["notifications", "announcements", "attendance", "leave", "calendar", "hr-requests", "documents", "freedom-wall", "profile"];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -32,14 +38,14 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([len, body, crc]);
 }
 
-// Tray icon drawn in code (no image tooling in the repo yet): a white clock face on a blue rounded
-// square, 4x4 supersampled so the edges are smooth. Swap for real artwork before release.
+// Tray icon drawn in code (no image tooling in the repo yet): a gold clock face on a portal-green
+// rounded square, 4x4 supersampled so the edges are smooth. Swap for real artwork before release.
 function trayIcon(): Electron.NativeImage {
   const size = 32;
   const ss = 4;
   const c = (size - 1) / 2 + 0.5;
   const inRoundedSquare = (x: number, y: number): boolean => {
-    const r = 7;
+    const r = 9;
     const dx = Math.max(r - x, 0, x - (size - r));
     const dy = Math.max(r - y, 0, y - (size - r));
     return dx * dx + dy * dy <= r * r;
@@ -71,9 +77,11 @@ function trayIcon(): Electron.NativeImage {
       const n = ss * ss;
       const o = 1 + px * 4;
       const t = bg ? fg / bg : 0;
-      row[o] = Math.round(0x1f + (255 - 0x1f) * t);
-      row[o + 1] = Math.round(0x5f + (255 - 0x5f) * t);
-      row[o + 2] = Math.round(0xbf + (255 - 0xbf) * t);
+      // Portal green, lighter at the top left to deeper at the bottom right, with a gold clock.
+      const g = (px + py) / (2 * (size - 1));
+      const base = [0x1f + (0x0d - 0x1f) * g, 0xa7 + (0x47 - 0xa7) * g, 0x63 + (0x2e - 0x63) * g];
+      const gold = [0xfb, 0xbf, 0x24];
+      for (let k = 0; k < 3; k++) row[o + k] = Math.round(base[k] + (gold[k] - base[k]) * t);
       row[o + 3] = Math.round((bg / n) * 255);
     }
     rows.push(row);
@@ -136,6 +144,23 @@ function keepAboveShownDesktop(): void {
     liftedForDesktop = false;
     win.setAlwaysOnTop(false);
     sendToBottom(hwnd);
+  }
+}
+
+// "Minimize" only means something when another app window is open to go behind. With nothing else open,
+// the panel hides the button. Unsure (the check threw)? Show it: a button that does nothing beats a missing one.
+let canMinimize = true;
+function updateMinimizeAvailable(): void {
+  if (!win) return;
+  let next = true;
+  try {
+    next = openAppWindows(hwnd) > 0;
+  } catch {
+    next = true;
+  }
+  if (next !== canMinimize) {
+    canMinimize = next;
+    win.webContents.send("minimize:available", next);
   }
 }
 
@@ -222,32 +247,84 @@ app.whenReady().then(() => {
   createWindow();
 
   tray = new Tray(trayIcon());
-  tray.setToolTip("BPO Time");
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: "Show panel", click: raise },
-      { label: "Open portal", click: () => shell.openExternal(PORTAL_URL) },
-      { label: "Sign out of this PC", click: signOut },
-      { type: "separator" },
-      { label: "Quit BPO Time", click: quit },
-    ])
-  );
+  tray.setToolTip("BPO Time " + app.getVersion());
+  const buildTrayMenu = () => {
+    const waiting = updates.ready();
+    tray?.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: "Show panel", click: raise },
+        { label: "Open portal", click: () => shell.openExternal(PORTAL_URL) },
+        ...(waiting ? [{ label: `Restart to update to ${waiting}`, click: () => updates.installNow() }] : []),
+        { label: "Sign out of this PC", click: signOut },
+        { type: "separator" as const },
+        { label: "Quit BPO Time", click: quit },
+      ])
+    );
+  };
+  buildTrayMenu();
+
+  // Updates (released builds only): a newer version downloads in the background and installs on the next restart.
+  ipcMain.handle("app:version", () => ({ version: app.getVersion(), updateReady: updates.ready() }));
+  ipcMain.on("update:install", () => updates.installNow());
+  updates.start((version) => {
+    buildTrayMenu();
+    win?.webContents.send("update:ready", version);
+    toast(`Version ${version} is ready. It installs when BPO Time restarts (More, Restart to update).`);
+  });
 
   ipcMain.on("panel:minimize", minimize);
   tray.on("click", raise);
   tray.on("double-click", raise);
-  ipcMain.on("portal:open", () => shell.openExternal(PORTAL_URL));
+  // The panel may ask for a page by name; anything not listed opens the portal home.
+  // An announcement id is only accepted when it looks like a real id, so a link can never carry anything else.
+  ipcMain.on("portal:open", (_e, page?: string, id?: string) => {
+    if (page === "announcements" && typeof id === "string" && UUID.test(id)) {
+      void shell.openExternal(`${PORTAL_URL}announcements/${id}`);
+    } else {
+      void shell.openExternal(page && PORTAL_PAGES.includes(page) ? PORTAL_URL + page : PORTAL_URL);
+    }
+  });
   ipcMain.on("app:quit", quit);
   ipcMain.handle("auth:get", () => auth.getState());
   ipcMain.on("auth:signout", signOut);
   auth.onChange((s) => {
     win?.webContents.send("auth:state", s);
     attendance.follow(s);
+    counts.follow(s);
+    feed.follow(s);
   });
+  feed.onChange((f) => win?.webContents.send("feed:state", f));
+  ipcMain.handle("feed:get", () => feed.get());
+  counts.onChange((c) => win?.webContents.send("counts:state", c));
+  ipcMain.handle("counts:get", () => counts.get());
   attendance.onChange((a) => win?.webContents.send("attendance:state", a));
   ipcMain.handle("attendance:get", () => attendance.get());
   ipcMain.handle("attendance:clockIn", () => attendance.clockIn());
   ipcMain.handle("attendance:clockOut", () => attendance.clockOut());
+  // Starting a break can also copy a short message ("Taking my break" / "Taking my lunch") for pasting into a chat.
+  // It is copied only after the portal has accepted the break, and only when the person has that switched on.
+  ipcMain.handle("attendance:startBreak", async (_e, slot: unknown, copy: unknown) => {
+    if (slot !== "morning" && slot !== "lunch" && slot !== "afternoon") return { ok: false, message: "That break is not one of the three." };
+    const r = await attendance.startBreak(slot);
+    if (r.ok && copy === true) {
+      const text = slot === "lunch" ? "Taking my lunch" : "Taking my break";
+      clipboard.writeText(text);
+      return { ok: true, message: `${r.message} Copied \u201c${text}\u201d to your clipboard.` };
+    }
+    return r;
+  });
+  // Ending a break copies "Back from break" / "Back from lunch" the same way (same on/off switch in the panel).
+  ipcMain.handle("attendance:endBreak", async (_e, copy: unknown) => {
+    const current = attendance.get();
+    const running = current && "breaks" in current ? current.breaks.find((b) => b.status === "taken" && b.startedAt && !b.endedAt) : undefined;
+    const r = await attendance.endBreak();
+    if (r.ok && copy === true && running) {
+      const text = running.slot === "lunch" ? "Back from lunch" : "Back from break";
+      clipboard.writeText(text);
+      return { ok: true, message: `${r.message} Copied “${text}” to your clipboard.` };
+    }
+    return r;
+  });
 
   // Signed in already? Verify quietly. Started by a bpotime:// link? Handle it once we know that.
   void auth.restore().then(() => {
@@ -256,6 +333,8 @@ app.whenReady().then(() => {
 
   // Monitor plugged in, resolution or scale changed: take the edge again.
   setInterval(keepAboveShownDesktop, 250);
+  setInterval(updateMinimizeAvailable, 750);
+  ipcMain.handle("minimize:get", () => canMinimize);
   screen.on("display-metrics-changed", () => shown && place());
 });
 

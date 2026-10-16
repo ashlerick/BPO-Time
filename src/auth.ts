@@ -89,10 +89,14 @@ export type ApiResult = { kind: "ok"; status: number; body: any } | { kind: "err
  * Call a device endpoint with this PC's token. A 401 means the portal has disconnected this PC
  * (revoked, or account deactivated): drop the token and go back to "Connect your account".
  */
-export async function api(pathname: string, method: "GET" | "POST"): Promise<ApiResult> {
+export async function api(pathname: string, method: "GET" | "POST", body?: unknown): Promise<ApiResult> {
   if (!token) return { kind: "error", status: 401, message: "This PC is not connected. Press Launch App in the portal." };
   try {
-    const res = await call(pathname, { method, headers: { Authorization: `Bearer ${token}` } });
+    const res = await call(pathname, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, ...(body !== undefined && { "Content-Type": "application/json" }) },
+      ...(body !== undefined && { body: JSON.stringify(body) }),
+    });
     if (res.status === 401) {
       // A 401 does not by itself mean this PC was disconnected: a route the portal does not have yet
       // is answered the same way. Only the device check itself may sign this PC out.

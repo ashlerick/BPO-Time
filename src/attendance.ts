@@ -11,6 +11,20 @@ export interface Attendance {
   checkInAt: string | null;
   checkOutAt: string | null;
   serverNow: string;
+  /** Breaks and lunch so far today (rules: README, "Breaks and lunch"). */
+  breaks: BreakEntry[];
+  /** Seconds allowed per slot, from the portal. */
+  breakAllowances: Record<BreakSlot, number>;
+}
+
+export type BreakSlot = "morning" | "lunch" | "afternoon";
+
+export interface BreakEntry {
+  slot: BreakSlot;
+  status: "taken" | "not_taken";
+  startedAt: string | null;
+  endedAt: string | null;
+  overSeconds: number;
 }
 
 const REFRESH_MS = 60_000;
@@ -42,8 +56,8 @@ export async function refresh(): Promise<void> {
   else if (r.kind === "error" && auth.getState().status === "signedIn") set({ error: r.message });
 }
 
-async function act(path: string, success: string): Promise<{ ok: boolean; message: string }> {
-  const r = await auth.api(path, "POST");
+async function act(path: string, success: string, body?: unknown): Promise<{ ok: boolean; message: string }> {
+  const r = await auth.api(path, "POST", body);
   if (r.kind === "ok") {
     set(r.body as Attendance);
     return { ok: true, message: success };
@@ -56,6 +70,15 @@ async function act(path: string, success: string): Promise<{ ok: boolean; messag
 
 export function clockIn() {
   return act("/hr/device-clock-in", "Clocked in. Your time is now being counted.");
+}
+
+export function startBreak(slot: BreakSlot) {
+  const name = { morning: "Break 1", lunch: "Lunch", afternoon: "Break 2" }[slot];
+  return act("/hr/device-break-start", `${name} started.`, { slot });
+}
+
+export function endBreak() {
+  return act("/hr/device-break-end", "Break ended. Welcome back.");
 }
 
 export function clockOut() {

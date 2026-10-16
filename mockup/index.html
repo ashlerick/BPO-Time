@@ -5,12 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BPO Time - panel mockup</title>
 <style>
+  /* Same look as the portal: deep green with gold accents, dark only. */
   :root {
-    --bg: #f3f5f8; --panel: #ffffff; --ink: #1b2430; --muted: #6b7788; --line: #e1e6ed;
-    --brand: #1f5fbf; --ok: #1e9e5a; --warn: #d98a00; --bad: #c9372c; --idle: #7a5af8;
+    --bg: #07160f; --panel: #0b2016; --raise: #0f2b1e; --ink: #ecf5ef; --muted: #8fa89a; --line: rgba(255,255,255,.09);
+    --brand: #158a52; --brand-hi: #1fa763; --gold: #fbbf24; --ok: #34d399; --warn: #f5a623; --bad: #e5534b; --idle: #a78bfa;
+    --thumb: rgba(255,255,255,.2); --danger-text: #ff8b84;
+    --tip-bg: #020b07; --tip-ink: #ecf5ef;
   }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #11161d; --panel: #1a212b; --ink: #e8edf3; --muted: #93a0b2; --line: #2a3340; }
+  /* Light mode: same greens, on a pale page. Switched from the More menu and kept in step with the portal. */
+  html[data-theme="light"] {
+    --bg: #e6efe9; --panel: #ffffff; --raise: #f3f8f5; --ink: #10261b; --muted: #55705f; --line: rgba(10,40,25,.16);
+    --brand: #158a52; --brand-hi: #0f7a47; --gold: #a15a07; --ok: #0f9d63; --warn: #a15a07; --bad: #c4372c; --idle: #6d4ae0;
+    --thumb: rgba(10,40,25,.28); --danger-text: #c4372c;
+    --tip-bg: #10261b; --tip-ink: #ffffff;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font: 14px/1.4 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--ink); }
@@ -26,58 +33,175 @@
   .panel { width: 300px; flex: none; background: var(--panel); border: 1px solid var(--line);
     border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.14); display: flex; flex-direction: column;
     align-self: flex-start; position: sticky; top: 24px; overflow: hidden; }
-  .head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
-  .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--brand); color: #fff;
+  .head { display: flex; align-items: center; gap: 12px; padding: 16px 16px 12px; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--brand-hi), var(--brand)); color: #fff; box-shadow: 0 0 0 2px rgba(251,191,36,.55);
     display: grid; place-items: center; font-weight: 600; flex: none; }
+  /* the avatar and name are one button: it opens My Profile in the portal */
+  .whoami { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; margin: -4px -6px; padding: 4px 6px; font: inherit; color: inherit; text-align: left;
+    background: none; border: 0; border-radius: 10px; cursor: pointer; }
+  .whoami:hover:not(:disabled) { background: rgba(255,255,255,.06); }
+  .whoami:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
+  .whoami:disabled { cursor: default; }
+  .whoami:disabled::after { display: none; }
   .who { min-width: 0; flex: 1; }
-  .who b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who b { display: block; font-size: 15px; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .status { font-size: 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-  .iconbtn { border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
-  .iconbtn:hover { background: var(--bg); }
-  .body { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+  .iconbtn { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border: 1px solid var(--line); background: var(--raise);
+    color: var(--ink); cursor: pointer; border-radius: 8px; }
+  .iconbtn:hover { border-color: var(--brand-hi); background: var(--panel); }
+  .iconbtn:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
+  .body { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
   .clock { text-align: center; }
-  .clock .big { font-size: 40px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
-  .clock .lbl { font-size: 12px; color: var(--muted); }
-  .week { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 10px; background: var(--bg); border-radius: 8px; }
-  .week span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .clock .big { font-size: 44px; font-weight: 300; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+  .dayname { font-size: 11px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .clock .lbl { font-size: 12px; color: var(--muted); letter-spacing: .04em; margin-top: 2px; }
   .actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
-  .slide { position: relative; height: 46px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line);
+  .slide { position: relative; height: 48px; border-radius: 999px; background: var(--raise); border: 1px solid var(--line);
     color: var(--muted); overflow: hidden; user-select: none; touch-action: none; }
-  .slide.ok { border-color: var(--ok); color: var(--ok); }
-  .slide-label { position: absolute; inset: 0; display: grid; place-items: center; padding-left: 40px; font-weight: 600; pointer-events: none; }
-  .slide-knob { position: absolute; top: 4px; left: 4px; width: 38px; height: 38px; border-radius: 6px; background: var(--brand);
-    color: #fff; display: grid; place-items: center; font-size: 26px; line-height: 1; cursor: grab; touch-action: none; }
+  .slide-fill { position: absolute; top: 0; left: 0; bottom: 0; width: 0; border-radius: 999px;
+    background: linear-gradient(90deg, rgba(21,138,82,.15), rgba(31,167,99,.55)); pointer-events: none; }
+  .slide.snap .slide-fill { transition: width .18s ease; }
+  .slide-label { transition: opacity .12s linear; position: absolute; inset: 0; display: grid; place-items: center; padding-left: 44px; font-weight: 600; pointer-events: none; }
+  .slide-knob { position: absolute; top: 4px; left: 4px; width: 40px; height: 40px; border-radius: 50%; background: var(--brand);
+    color: #fff; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; }
+  /* Armed: the same track is now the Clock out button. The knob (right end) becomes a cancel x, the label counts down,
+     and a bar along the bottom shrinks with it. */
+  .slide .k-x { display: none; }
+  .slide.armed { border-color: var(--bad); color: var(--ink); cursor: pointer; background: rgba(229,83,75,.14); }
+  .slide.armed .slide-fill { width: 100% !important; background: rgba(229,83,75,.30); }
+  .slide.armed .slide-knob { background: var(--bad); cursor: pointer; }
+  .slide.armed .k-go { display: none; }
+  .slide.armed .k-x { display: block; }
+  .slide.armed .slide-label { padding-left: 0; padding-right: 44px; color: var(--ink); }
+  .armtxt { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+  .armmain { font-weight: 700; }
+  .armsub { font-size: 11px; font-weight: 500; color: var(--muted); }
+  .armsub b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .slide.armed.hurry .armsub b { color: var(--warn); }
+  /* the countdown bar sits under the label only, well clear of the knob (the right 44px) and the pill's curved ends */
+  .slide-bar { position: absolute; left: 22px; right: 62px; bottom: 6px; height: 3px; border-radius: 3px; background: var(--ink); opacity: .55; transform-origin: left; display: none; pointer-events: none; }
+  .slide.armed .slide-bar { display: block; }
   .slide-knob:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-  .slide.ok .slide-knob { background: var(--ok); }
-  #clockout:disabled { opacity: .45; }
-  .slide.snap .slide-knob { transition: transform .18s ease; }
-  button.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 9px 10px;
-    border-radius: 8px; font: inherit; cursor: pointer; }
+  .slide.snap .slide-knob { transition: transform .18s ease, scale .18s ease, box-shadow .18s ease; }
+  .slide-knob { transition: scale .15s ease, box-shadow .15s ease; will-change: transform; }
+  .slide.drag .slide-knob { cursor: grabbing; scale: 1.1; box-shadow: 0 0 0 6px rgba(31,167,99,.28), 0 6px 16px rgba(0,0,0,.45); }
+  .slide.drag { border-color: var(--brand-hi); }
+  .slide.armed .slide-knob { animation: pop .35s ease; }
+  @keyframes pop { 40% { scale: 1.22; } 100% { scale: 1; } }
+  /* an idle nudge on the chevron so it is clear the knob can be slid */
+  .slide:not(.drag):not(.armed) .slide-knob svg { animation: nudge 2.4s ease-in-out infinite; }
+  @keyframes nudge { 0%, 60%, 100% { transform: translateX(0); } 75% { transform: translateX(4px); } }
+  @media (prefers-reduced-motion: reduce) { .slide-knob svg, .slide.armed .slide-knob { animation: none !important; } .slide.drag .slide-knob { scale: 1; } }
+  button.btn { border: 1px solid var(--line); background: var(--raise); color: var(--ink); padding: 10px 12px;
+    border-radius: 10px; font: inherit; cursor: pointer; }
   button.btn:hover:not(:disabled) { border-color: var(--brand); }
   button.btn:disabled { opacity: .45; cursor: default; }
-  button.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; padding: 11px; }
-  button.danger { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 600; padding: 11px; }
+  button.primary { background: var(--brand); border-color: var(--brand-hi); color: #fff; font-weight: 600; padding: 12px; }
+  button.primary:hover:not(:disabled) { background: var(--brand-hi); }
+  button.danger { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 600; padding: 12px; }
   button.active { background: var(--warn); border-color: var(--warn); color: #fff; }
-  .zones { display: flex; justify-content: space-between; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+  .zones { display: flex; justify-content: space-between; gap: 8px; padding: 10px 16px; background: var(--bg); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .zones > div { display: flex; flex-direction: column; }
-  .zlabel { font-size: 10px; letter-spacing: .05em; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+  .zlabel { font-size: 10px; color: var(--gold) !important; opacity: .85; letter-spacing: .05em; color: var(--muted); font-weight: 600; text-transform: uppercase; }
   .ztime { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .notice { border: 1px solid var(--line); border-left: 3px solid var(--brand); border-radius: 8px; padding: 10px 12px; font-size: 13px; background: var(--bg); }
+  .notice { border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: 10px; padding: 10px 12px; font-size: 13px; background: var(--raise); }
   .notice b { display: block; margin-bottom: 4px; }
   .notice .btn { margin-top: 8px; width: 100%; }
   [hidden] { display: none !important; }
-  .shift { font-size: 13px; border-left: 3px solid var(--ok); padding: 2px 0 2px 10px; }
-  .shift small { color: var(--muted); display: block; }
   .chips { display: flex; gap: 8px; }
-  .chip { flex: 1; text-align: center; padding: 8px 6px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; color: var(--muted); }
-  .chip b { display: block; font-size: 18px; color: var(--ink); }
+  .chip { flex: 1; font: inherit; cursor: pointer; display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 9px 6px; background: var(--raise); border: 1px solid var(--line); border-radius: 10px; font-size: 12px; color: var(--muted); }
+  .chip b { font-size: 18px; color: var(--ink); }
+  /* Tooltips: appear at once on hover or keyboard focus. Above the button by default; data-tip-pos="below" flips it,
+     data-tip-align="start" / "end" anchors it to the button's left / right edge so it never leaves the panel. */
+  [data-tip] { position: relative; }
+  [data-tip]:hover, [data-tip]:focus-visible { z-index: 40; }   /* the hovered item's tip sits above its neighbours */
+  [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(3px);
+    z-index: 30; padding: 5px 9px; border-radius: 8px; white-space: nowrap; pointer-events: none; opacity: 0;
+    font-size: 12px; font-weight: 600; line-height: 1.2; letter-spacing: 0; text-transform: none; color: var(--tip-ink); background: var(--tip-bg);
+    border: 1px solid rgba(255,255,255,.14); box-shadow: 0 6px 18px rgba(0,0,0,.45); transition: opacity .08s ease, transform .08s ease; }
+  [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+  [data-tip-align="start"]::after { left: 0; transform: translateY(3px); }
+  [data-tip-align="start"]:hover::after, [data-tip-align="start"]:focus-visible::after { transform: translateY(0); }
+  [data-tip-align="end"]::after { left: auto; right: 0; transform: translateY(3px); }
+  [data-tip-align="end"]:hover::after, [data-tip-align="end"]:focus-visible::after { transform: translateY(0); }
+  [data-tip-pos="below"]::after { bottom: auto; top: calc(100% + 8px); }
+  /* inside: for cards in a scrolling list, where a tip above or below would be clipped; sits in the card's empty top-right corner */
+  [data-tip-pos="inside"]::after { bottom: auto; left: auto; top: 7px; right: 8px; transform: translateY(2px); }
+  [data-tip-pos="inside"]:hover::after, [data-tip-pos="inside"]:focus-visible::after { transform: translateY(0); }
+  @media (prefers-reduced-motion: reduce) { [data-tip]::after { transition: none; } }
+  .quick { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .ql { display: grid; place-items: center; height: 36px; color: var(--muted); cursor: pointer; background: var(--raise); border: 1px solid var(--line); border-radius: 10px; }
+  .ql:hover { color: var(--ink); border-color: var(--brand-hi); background: var(--panel); }
+  .ql:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
+  .breaks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .brk { font: inherit; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 4px;
+    background: var(--raise); border: 1px solid var(--line); border-radius: 10px; }
+  .brk .bl { font-size: 11px; color: var(--muted); }
+  .brk .bt { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .brk:hover:not(:disabled) { border-color: var(--brand-hi); background: var(--panel); }
+  .brk:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
+  /* fade the text, not the whole button: opacity on the button would trap its tooltip underneath the next row */
+  .brk:disabled { cursor: default; }
+  .brk:disabled > span { opacity: .55; }
+  .brk.run { border-color: var(--brand-hi); background: rgba(31,167,99,.16); }
+  .brk.grace { border-color: var(--warn); background: rgba(245,166,35,.14); }
+  .brk.grace .bt { color: var(--warn); }
+  .brk.over { border-color: var(--bad); background: rgba(229,83,75,.16); }
+  .brk.over .bt, .brk.over .bl { color: var(--bad); }
+  .brk.done .bt { color: var(--ok); }
+  .brk.skipped { border-style: dashed; }
+  .brk.skipped .bt { color: var(--muted); font-size: 12px; font-weight: 500; }
+  .brk.armed { border-color: var(--warn); }
+  .chip:hover, .ann:hover { border-color: var(--brand-hi); background: var(--panel); }
+  .chip:focus-visible, .ann:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
+  .bday { position: relative; isolation: isolate; overflow: hidden; border-radius: 10px; padding: 8px 30px 8px 12px; text-align: center; font-size: 12px; line-height: 1.35;
+    background: linear-gradient(135deg, rgba(251,191,36,.20), rgba(21,138,82,.28)); border: 1px solid rgba(251,191,36,.45); }
+  .bday .big { display: block; position: relative; z-index: 1; font-size: 14px; font-weight: 700; color: var(--gold); }
+  .bday .also { display: block; position: relative; z-index: 1; color: var(--ink); opacity: .9; margin-top: 1px; }
+  .bday .bx { position: absolute; top: 4px; right: 4px; z-index: 2; width: 22px; height: 22px; display: grid; place-items: center; font: inherit; font-size: 16px; line-height: 1;
+    color: var(--muted); background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
+  .bday .bx:hover { color: var(--ink); background: rgba(255,255,255,.12); }
+  .bday .bx:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 1px; }
+  .bday .confetti { position: absolute; z-index: -1; top: -8px; width: 6px; height: 10px; border-radius: 1px; opacity: .9; animation: fall 3.2s linear infinite; pointer-events: none; }
+  @keyframes fall { to { transform: translateY(70px) rotate(360deg); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .bday .confetti { display: none; } }
+  .newshead { font-size: 10px; letter-spacing: .05em; font-weight: 600; text-transform: uppercase; color: var(--gold); opacity: .85; margin-bottom: 8px; }
+  .body > :not(#newsWrap) { flex: none; }
+  #newsWrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .news { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding: 0 6px 2px 0; }
+  /* slim scrollbar in the portal's colours */
+  .news::-webkit-scrollbar { width: 6px; }
+  .news::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+  .news::-webkit-scrollbar-track { background: transparent; margin: 2px 0; }
+  .news::-webkit-scrollbar-thumb { background: var(--thumb); border-radius: 999px; }
+  .news::-webkit-scrollbar-thumb:hover { background: var(--brand-hi); }
+  .news > * { flex: none; }
+  .ann { text-align: left; font: inherit; color: var(--ink); cursor: pointer; background: var(--raise); border: 1px solid var(--line);
+    border-left: 3px solid var(--gold); border-radius: 10px; padding: 9px 12px; }
+  .ann small { display: block; color: var(--muted); font-size: 11px; }
+  .ann b { display: block; font-size: 13px; margin: 1px 0 2px; }
+  .ann span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); font-size: 12px; }
   .foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
-  .foot a { color: var(--brand); text-decoration: none; cursor: pointer; }
+  .morebtn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer;
+    background: var(--raise); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; }
+  .morebtn:hover, .morebtn[aria-expanded="true"] { border-color: var(--brand-hi); background: var(--panel); }
+  .morebtn:focus-visible, .menu .item:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
+  .menu { position: absolute; right: 12px; bottom: 50px; z-index: 5; min-width: 190px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+    background: var(--raise); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  .menu .item { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 0;
+    border-radius: 8px; padding: 9px 10px; cursor: pointer; }
+  .menu .item:hover { background: var(--panel); }
+  .menu .ver { padding: 6px 10px 2px; font-size: 11px; color: var(--muted); }
+  #updateBtn { color: var(--ok); font-weight: 600; }
+  .menu .danger-item { color: var(--danger-text); }
+  .menu .danger-item.armed { background: var(--bad); color: #fff; font-weight: 600; }
+  #soWrap { display: block; margin-top: 2px; padding-top: 4px; border-top: 1px solid var(--line); }
   .sync { display: inline-flex; align-items: center; gap: 6px; }
 
 
-  .drawer { padding: 14px; font-size: 13px; display: none; border-top: 1px solid var(--line); background: var(--bg); }
+  .drawer { position: absolute; left: 12px; right: 12px; bottom: 50px; z-index: 4; padding: 14px; font-size: 13px; display: none;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--raise); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
   .drawer.open { display: block; }
   .drawer h3 { margin: 0 0 6px; font-size: 13px; }
   .drawer ul { margin: 0 0 8px; padding-left: 18px; }
@@ -93,8 +217,8 @@
   html.app .stage { padding: 0; min-height: 100vh; display: block; }
   html.app .desk > h1, html.app .desk > p { display: none; }
   html.app .desk { max-width: none; }
-  html.app .panel { width: 100%; height: 100vh; border: 0; border-radius: 0; box-shadow: none; position: static; }
-  html.app .panel .body { flex: 1; overflow: auto; }
+  html.app .panel { width: 100%; height: 100vh; border: 0; border-radius: 0; box-shadow: none; position: relative; top: 0; }
+  html.app .panel .body { flex: 1; min-height: 0; overflow: hidden; }
   html.app .sim { margin: 0 14px 12px; padding: 10px; }
   html.app .sim .note { display: none; }
   html.app #toasts { left: 12px; right: 12px; bottom: 56px; }
@@ -113,18 +237,20 @@
       <button class="btn" id="simIdle">PC goes idle / comes back</button>
       <button class="btn" id="simOffline">Go offline / back online</button>
       <button class="btn" id="simFast">Speed up the clock (x60)</button>
-      <div class="note">The real app reads idle from Windows, not from this page. The week total here is made-up.</div>
+      <div class="note">The real app reads idle from Windows, not from this page.</div>
     </div>
   </div>
 
   <aside class="panel" id="panel">
     <div class="head">
-      <div class="avatar" id="avatar">?</div>
-      <div class="who">
-        <b id="who">BPO Time</b>
-        <span class="status"><span class="dot" id="dot"></span><span id="statusText">Not clocked in</span></span>
-      </div>
-      <button class="iconbtn" id="minimize" title="Minimize (send behind your apps)">&#8211;</button>
+      <button class="whoami" id="whoami" type="button" data-tip="Open my profile in the portal" data-tip-pos="below" data-tip-align="start" disabled>
+        <div class="avatar" id="avatar">?</div>
+        <div class="who">
+          <b id="who">BPO Time</b>
+          <span class="status"><span class="dot" id="dot"></span><span id="statusText">Not clocked in</span></span>
+        </div>
+      </button>
+      <button class="iconbtn" id="minimize" data-tip="Minimize (send behind your apps)" data-tip-pos="below" data-tip-align="end" aria-label="Minimize"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg></button>
     </div>
     <div class="zones">
       <div><span class="zlabel">PH &middot; <span id="phDay"></span></span><span class="ztime" id="phTime"></span></div>
@@ -133,25 +259,40 @@
 
     <div class="body">
       <div class="notice" id="notice" hidden></div>
+      <div class="bday" id="bday" hidden></div>
       <div class="clock">
+        <div class="dayname" id="dayName"></div>
         <div class="big" id="today">0:00:00</div>
-        <div class="lbl">worked today</div>
+        <div class="lbl" id="lbl">worked today</div>
       </div>
-      <div class="week"><span>This week</span><span id="week">31:42</span></div>
       <div class="actions">
         <button class="btn primary main" id="clock">Clock in</button>
         <div class="slide" id="slide" hidden>
-          <span class="slide-label" id="slideLabel">Slide to confirm</span>
-          <div class="slide-knob" id="knob" tabindex="0" role="slider" aria-label="Slide to confirm clock out"
-               aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">&#8250;</div>
+          <div class="slide-fill" id="fill"></div>
+          <div class="slide-bar" id="bar"></div>
+          <span class="slide-label" id="slideLabel">Slide to end your shift</span>
+          <div class="slide-knob" id="knob" tabindex="0" role="slider" aria-label="Slide to end your shift"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><svg class="k-go" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><svg class="k-x" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
         </div>
-        <button class="btn danger main" id="clockout" disabled hidden>Clock out</button>
       </div>
-      <div class="shift" id="shift">Shift 9:00 PM - 6:00 AM<small id="late">Not started yet</small></div>
+      <div class="breaks" id="breaks" hidden>
+        <button class="brk" type="button" data-slot="morning" data-tip="Morning break \u00b7 10 minutes" data-tip-pos="below" data-tip-align="start"><span class="bl">Break 1</span><span class="bt">10:00</span></button>
+        <button class="brk" type="button" data-slot="lunch" data-tip="Lunch \u00b7 30 minutes" data-tip-pos="below"><span class="bl">Lunch</span><span class="bt">30:00</span></button>
+        <button class="brk" type="button" data-slot="afternoon" data-tip="Afternoon break \u00b7 10 minutes" data-tip-pos="below" data-tip-align="end"><span class="bl">Break 2</span><span class="bt">10:00</span></button>
+      </div>
       <div class="chips">
-        <div class="chip"><b id="notif">3</b>notifications</div>
-        <div class="chip"><b id="todo">2</b>to-dos due</div>
+        <button class="chip" id="notifCard" type="button" data-tip="Open notifications in the portal" data-tip-align="start"><b id="notif">3</b>notifications</button>
+        <button class="chip" id="todoCard" type="button" data-tip="Open your to-dos in the portal" data-tip-align="end"><b id="todo">2</b>to-dos due</button>
       </div>
+      <nav class="quick" id="quick" aria-label="Quick links">
+        <button type="button" class="ql" data-page="attendance" data-tip="Attendance" data-tip-align="start" aria-label="Attendance"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+        <button type="button" class="ql" data-page="leave" data-tip="Leave requests" aria-label="Leave requests"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M9 15l2 2 4-4"/></svg></button>
+        <button type="button" class="ql" data-page="calendar" data-tip="Calendar" aria-label="Calendar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
+        <button type="button" class="ql" data-page="hr-requests" data-tip="HR requests" aria-label="HR requests"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l1 2h3v14H5V6h3z"/><path d="M9 12h6M9 16h4"/></svg></button>
+        <button type="button" class="ql" data-page="documents" data-tip="Documents" aria-label="Documents"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg></button>
+        <button type="button" class="ql" data-page="freedom-wall" data-tip="Freedom Wall" data-tip-align="end" aria-label="Freedom Wall"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v12h-7l-4 4v-4H5z"/></svg></button>
+      </nav>
+      <div id="newsWrap" hidden><div class="newshead">Announcements</div><div class="news" id="news"></div></div>
     </div>
 
     <div class="drawer" id="drawer">
@@ -168,7 +309,18 @@
 
     <div class="foot">
       <span class="sync"><span class="dot" id="syncDot" style="background:var(--ok)"></span><span id="syncText">Synced</span></span>
-      <span><a id="priv">What's recorded</a> &middot; <span id="soWrap" hidden><a id="signout">Sign out</a> &middot; </span><a id="portal">Open portal</a></span>
+      <button class="morebtn" id="more" type="button" aria-haspopup="menu" aria-expanded="false">More
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+      </button>
+      <div class="menu" id="menu" role="menu" hidden>
+        <button class="item" id="priv" type="button" role="menuitem">What's recorded</button>
+        <button class="item" id="portal" type="button" role="menuitem">Open portal</button>
+        <button class="item" id="themeBtn" type="button" role="menuitem">Switch to light mode</button>
+        <button class="item" id="copyBtn" type="button" role="menuitemcheckbox" aria-checked="true">Copy break message: On</button>
+        <button class="item" id="updateBtn" type="button" role="menuitem" hidden>Restart to update</button>
+        <span id="soWrap" hidden><button class="item danger-item" id="signout" type="button" role="menuitem">Sign out of this PC</button></span>
+        <div class="ver" id="ver" hidden></div>
+      </div>
     </div>
   </aside>
 </div>
@@ -176,7 +328,7 @@
 
 <script>
   const $ = id => document.getElementById(id);
-  const s = { state: 'out', workedMs: 0, idle: false, offline: false, queued: 0, speed: 1, last: Date.now(), weekBaseMs: (31*60+42)*60000 };
+  const s = { state: 'out', workedMs: 0, idle: false, offline: false, queued: 0, speed: 1, last: Date.now() };
   const COLORS = { out: 'var(--muted)', in: 'var(--ok)', idle: 'var(--idle)' };
 
   const hms = ms => { const t = Math.floor(ms/1000), h = Math.floor(t/3600), m = Math.floor(t%3600/60), x = t%60;
@@ -196,6 +348,10 @@
   const ZONES = [['ph', 'PH', 'Asia/Manila'], ['ca', 'CA', 'America/Los_Angeles']];
   function paintClocks() {
     const now = new Date();
+    // The day of the shift, not the calendar day: a night shift crosses midnight, so once clocked in this
+    // stays on the day the shift started. Before clocking in it is today in the Philippines.
+    const dayOf = d => new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', weekday: 'long' }).format(d).toUpperCase();
+    $('dayName').textContent = dayOf(live && s.att && s.att.checkedIn && s.att.checkInAt ? new Date(s.att.checkInAt) : now);
     for (const [id, , tz] of ZONES) {
       const day = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric' }).format(now);
       const time = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(now);
@@ -204,9 +360,67 @@
     }
   }
 
+
+  // Announcements and today's birthdays from the portal. Text is set with textContent only:
+  // it is written by other people, so it must never be treated as HTML.
+  const CONFETTI = ['#fbbf24', '#34d399', '#f472b6', '#60a5fa', '#a78bfa'];
+  function paintFeed(f) {
+    const people = (f && f.birthdays) || [];
+    const bday = $('bday');
+    bday.replaceChildren();
+    // The x hides today's banner on this PC; it comes back tomorrow, or if someone else's birthday is added.
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+    const sig = today + '|' + people.map(p => p.name).join(',');
+    let dismissed = false;
+    try { dismissed = localStorage.getItem('bpotime:bday-dismissed') === sig; } catch (e) { /* storage blocked: shows every time */ }
+    bday.hidden = people.length === 0 || dismissed;
+    if (!bday.hidden) {
+      // Nobody is singled out on someone else's birthday: one person gets a single line, several share one list
+      // (alphabetical, the portal sorts them). Only on your own birthday are you the headline.
+      const me = people.find(p => p.isMe);
+      const big = document.createElement('span'); big.className = 'big';
+      const line = document.createElement('span'); line.className = 'also';
+      if (me) {
+        big.textContent = '\uD83C\uDF82 Happy birthday, ' + me.firstName + '!';
+        const others = people.filter(p => p !== me).map(p => p.name.replace(/ /g, ' '));   // keep each name in one piece
+        if (others.length) line.textContent = 'Also celebrating today: ' + others.join(', ');
+      } else if (people.length === 1) {
+        big.textContent = '\uD83C\uDF89 Birthday today \u00b7 ' + people[0].name;
+      } else {
+        big.textContent = '\uD83C\uDF89 Birthday today';
+        line.textContent = people.map(p => p.name.replace(/ /g, ' ')).join(', ');
+      }
+      bday.append(big);
+      if (line.textContent) bday.append(line);
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'bx'; x.setAttribute('aria-label', 'Hide for today'); x.title = 'Hide for today';
+      x.textContent = '\u00d7';
+      x.onclick = () => { try { localStorage.setItem('bpotime:bday-dismissed', sig); } catch (e) { /* not remembered */ } bday.hidden = true; };
+      bday.append(x);
+      for (let i = 0; i < 14; i++) {
+        const c = document.createElement('i'); c.className = 'confetti';
+        c.style.left = (4 + i * 7) + '%'; c.style.background = CONFETTI[i % CONFETTI.length];
+        c.style.animationDelay = (i * 0.23).toFixed(2) + 's'; bday.appendChild(c);
+      }
+    }
+    const items = (f && f.announcements) || [];
+    const news = $('news');
+    news.replaceChildren();
+    $('newsWrap').hidden = items.length === 0;
+    for (const a of items) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'ann'; b.dataset.tip = 'Open in the portal'; b.dataset.tipPos = 'inside';
+      const cat = document.createElement('small'); cat.textContent = a.category;
+      const title = document.createElement('b'); title.textContent = a.title;
+      const prev = document.createElement('span'); prev.textContent = a.preview;
+      b.append(cat, title, prev);
+      b.onclick = () => window.bpoTime ? window.bpoTime.openPortal('announcements', a.id) : toast('This would open the announcement in the portal.');
+      news.appendChild(b);
+    }
+  }
+
   function applyAuth(a) {
     const notice = $('notice');
     auth.signedIn = a.status === 'signedIn';
+    $('whoami').disabled = !auth.signedIn;   // nothing to open until someone is signed in
     if (a.status === 'signedIn') {
       auth.name = a.user.name;
       $('who').textContent = a.user.name;
@@ -232,17 +446,17 @@
 
   function render() {
     const eff = s.idle && s.state === 'in' ? 'idle' : s.state;
-    const label = { out: 'Not clocked in', in: 'Clocked in', idle: 'Idle - timer paused' }[eff];
+    let label = { out: 'Not clocked in', in: 'Clocked in', idle: 'Idle - timer paused' }[eff];
+    if (live && s.onBreak && !(s.att && s.att.checkedOut)) label = 'On break \u00b7 ' + SLOT_NAME[s.onBreak.slot];
     $('statusText').textContent = s.att && s.att.checkedOut ? 'Clocked out' : label;
     for (const id of ['dot']) $(id).style.background = COLORS[eff];
     $('today').textContent = hms(s.workedMs);
-    $('week').textContent = live ? '--:--' : hm(s.weekBaseMs + s.workedMs);
+    paintBreaks();
     // Clock in is a button. Clock out is a slider, so it cannot be pressed by accident.
     const done = !!(s.att && s.att.checkedOut);
     $('clock').hidden = s.state === 'in';
     const showOut = s.state === 'in' && auth.signedIn;
     $('slide').hidden = !showOut;
-    $('clockout').hidden = !showOut;
     if (!showOut) resetSlide();
     $('clock').textContent = done ? 'Clocked out for today' : 'Clock in';
     $('clock').disabled = !auth.signedIn || done || (live && !s.att);
@@ -269,21 +483,100 @@
     syncFromAttendance();
     render();
   }
+  // Fixed deduction: a slot that is taken (ended) or not taken takes off its full allowance; the slot running now
+  // takes off no more than its allowance, so going over is only a flag and the timer resumes after the limit.
+  function breakDeductionMs(a, end) {
+    let ms = 0;
+    for (const b of a.breaks || []) {
+      const allow = ((a.breakAllowances || {})[b.slot] || 0) * 1000;
+      if (b.status === 'not_taken' || b.endedAt) ms += allow;
+      else if (b.startedAt) ms += Math.min(Math.max(0, end - new Date(b.startedAt).getTime()), allow);
+    }
+    return ms;
+  }
+  const mmss = sec => { sec = Math.max(0, Math.floor(sec)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); };
+  const SLOT_NAME = { morning: 'Break 1', lunch: 'Lunch', afternoon: 'Break 2' };
+  const SLOTS = ['morning', 'lunch', 'afternoon'];
+  let armedSlot = null, armTimer = null;
+
+  // The tooltip says what the break is while it is available, and what happened once it is not.
+  const SLOT_FULL = { morning: 'Morning break', lunch: 'Lunch', afternoon: 'Afternoon break' };
+  function breakTip(slot, e, allow, grace, entries) {
+    const mins = Math.round(allow / 60);
+    if (!e) return SLOT_FULL[slot] + ' \u00b7 ' + mins + ' minutes';
+    if (e.status === 'not_taken') {
+      const later = SLOTS.slice(SLOTS.indexOf(slot) + 1).some(x => entries.some(b => b.slot === x && b.startedAt));
+      return later ? 'Not taken (a later break closed it)' : 'Not taken';
+    }
+    if (!e.endedAt) return 'Tap to end ' + (slot === 'lunch' ? 'lunch' : 'your break');
+    const secs = Math.round((new Date(e.endedAt) - new Date(e.startedAt)) / 1000);
+    if (e.overSeconds > grace) return 'Taken \u00b7 ' + mmss(secs) + ', ' + mmss(e.overSeconds) + ' over';
+    return 'Taken \u00b7 ' + mmss(secs) + (secs > allow ? ', within the grace' : '');
+  }
+
+  // The three break buttons: a countdown while running (red and counting up past the limit), a result afterwards.
+  function paintBreaks() {
+    const a = s.att, box = $('breaks');
+    box.hidden = !(live && a && a.checkedIn);
+    if (box.hidden) return;
+    const serverNow = new Date(a.serverNow).getTime() + (Date.now() - a.receivedAt);
+    const running = (a.breaks || []).find(b => b.status === 'taken' && b.startedAt && !b.endedAt);
+    for (const btn of box.querySelectorAll('.brk')) {
+      const slot = btn.dataset.slot, e = (a.breaks || []).find(b => b.slot === slot);
+      const allow = (a.breakAllowances || {})[slot] || 0;
+      const grace = a.breakGraceSeconds == null ? 60 : a.breakGraceSeconds;
+      let cls = 'brk', text = mmss(allow), off = false;
+      if (!e) { off = !!running || a.checkedOut; }
+      else if (e.status === 'not_taken') { cls += ' skipped'; text = 'Not taken'; off = true; }
+      else if (!e.endedAt) {
+        const left = allow - Math.floor((serverNow - new Date(e.startedAt).getTime()) / 1000);
+        // past 0:00 there is a grace period first: amber while inside it, red only once it has run out
+        if (left >= 0) { cls += ' run'; text = mmss(left); }
+        else if (-left <= grace) { cls += ' grace'; text = '+' + mmss(-left); }
+        else { cls += ' over'; text = '+' + mmss(-left); }
+      } else if (e.overSeconds > grace) { cls += ' over'; text = '+' + mmss(e.overSeconds) + ' over'; off = true; }
+      else { cls += ' done'; text = '\u2713 ' + mmss((new Date(e.endedAt) - new Date(e.startedAt)) / 1000); off = true; }
+      if (armedSlot === slot) cls += ' armed';
+      btn.className = cls;
+      btn.dataset.tip = breakTip(slot, e, allow, grace, a.breaks || []);
+      btn.disabled = off;   // a running break is never "off": tapping it ends the break
+      btn.querySelector('.bt').textContent = armedSlot === slot ? 'Tap again' : text;
+    }
+  }
+  function onBreakClick(slot) {
+    if (!live || !s.att) return;
+    const entries = s.att.breaks || [];
+    const running = entries.find(b => b.status === 'taken' && b.startedAt && !b.endedAt);
+    if (running) {
+      if (running.slot === slot) window.bpoTime.endBreak(copyOn).then(r => toast(r.message, !r.ok));
+      return;
+    }
+    // Starting a later slot skips the earlier ones that were not used, so ask first with a second tap.
+    const skipped = SLOTS.slice(0, SLOTS.indexOf(slot)).filter(x => !entries.some(b => b.slot === x));
+    if (skipped.length && armedSlot !== slot) {
+      armedSlot = slot; clearTimeout(armTimer);
+      toast('Starting ' + SLOT_NAME[slot] + ' skips ' + skipped.map(x => SLOT_NAME[x]).join(' and ') + '. Tap again to continue.');
+      armTimer = setTimeout(() => { armedSlot = null; paintBreaks(); }, 4000); paintBreaks(); return;
+    }
+    armedSlot = null; clearTimeout(armTimer);
+    window.bpoTime.startBreak(slot, copyOn).then(r => toast(r.message, !r.ok));
+  }
+  for (const b of document.querySelectorAll('.brk')) b.onclick = () => onBreakClick(b.dataset.slot);
+
   function syncFromAttendance() {
     const a = s.att;
-    if (!live || !a) { if (live) { s.state = 'out'; s.workedMs = 0; } return; }
+    if (!live || !a) { if (live) { s.state = 'out'; s.workedMs = 0; $('lbl').textContent = 'worked today'; } return; }
     const serverNow = new Date(a.serverNow).getTime() + (Date.now() - a.receivedAt);
     s.state = a.checkedIn && !a.checkedOut ? 'in' : 'out';
-    if (!a.checkedIn) { s.workedMs = 0; return; }
+    if (!a.checkedIn) { s.workedMs = 0; $('lbl').textContent = 'worked today'; return; }
     const end = a.checkedOut ? new Date(a.checkOutAt).getTime() : serverNow;
-    s.workedMs = Math.max(0, end - new Date(a.checkInAt).getTime());
+    s.workedMs = Math.max(0, end - new Date(a.checkInAt).getTime() - breakDeductionMs(a, end));
+    s.onBreak = (a.breaks || []).find(b => b.status === 'taken' && b.startedAt && !b.endedAt) || null;
     // Shifts and the portal's attendance are on PH (Manila) time, whatever this PC's clock zone is.
     const fmt = iso => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' }) + ' PH';
     const t = fmt(a.checkInAt);
-    $('shift').firstChild.textContent = 'Clocked in at ' + t;
-    $('late').textContent = a.checkedOut
-      ? 'Clocked out at ' + fmt(a.checkOutAt)
-      : 'Counting since ' + t;
+    // one short line under the timer: when the shift began, or the span once it is over
+    $('lbl').textContent = a.checkedOut ? 'worked today \u00b7 ' + t + ' to ' + fmt(a.checkOutAt) : 'worked today \u00b7 since ' + t;
   }
 
   function tick() {
@@ -303,60 +596,151 @@
       window.bpoTime.clockIn().then(r => toast(r.message, !r.ok));
       return;
     }
-    s.state = 'in'; toast('Clocked in. Your time is now being counted.'); $('late').textContent = 'On time (in at 8:57 PM)';
+    s.state = 'in'; toast('Clocked in. Your time is now being counted.');
     render();
   };
 
-  // Clock out is two deliberate steps: slide to confirm, then press the Clock out button that lights up.
-  // Sliding alone never clocks out. A confirmation left alone for 8 seconds is dropped.
+  // Clock out is two deliberate steps in ONE control: slide the knob to the end, then tap the track, which has become the
+  // Clock out button. Sliding alone never clocks out. The tap window is 8 seconds and is shown: the label counts down
+  // and a bar shrinks. Cancel: tap the x (the knob), drag it back, press Escape, or just let the time run out.
   (function () {
-    const slide = $('slide'), knob = $('knob'), label = $('slideLabel'), out = $('clockout');
-    let startX = 0, pos = 0, dragging = false, confirmed = false, timer = null;
+    const slide = $('slide'), knob = $('knob'), label = $('slideLabel'), fill = $('fill'), bar = $('bar');
+    const WINDOW_MS = 8000;
+    let startX = 0, pos = 0, dragging = false, armed = false, armedAt = 0, timer = null;
     const max = () => slide.clientWidth - knob.offsetWidth - 10;
     const move = x => { pos = Math.max(0, Math.min(max(), x)); knob.style.transform = 'translateX(' + pos + 'px)';
+      fill.style.width = pos ? (pos + 44) + 'px' : '0';
+      // the hint fades out as the knob moves along, and comes back when it snaps home
+      label.style.opacity = armed ? 1 : Math.max(0, 1 - (pos / max()) * 1.4);
       knob.setAttribute('aria-valuenow', Math.round(pos / max() * 100)); };
+    const stopTimer = () => { clearInterval(timer); timer = null; };
     resetSlide = () => {
-      clearTimeout(timer); confirmed = false; dragging = false;
-      slide.classList.remove('ok'); label.textContent = 'Slide to confirm'; out.disabled = true;
+      stopTimer(); armed = false; dragging = false;
+      slide.classList.remove('armed', 'drag', 'hurry'); label.textContent = 'Slide to end your shift';
+      slide.removeAttribute('role'); slide.removeAttribute('aria-label'); slide.removeAttribute('tabindex');
+      knob.setAttribute('role', 'slider'); knob.setAttribute('aria-label', 'Slide to end your shift');
       if (pos) { slide.classList.add('snap'); move(0); setTimeout(() => slide.classList.remove('snap'), 220); }
+      label.style.opacity = 1; bar.style.transform = 'scaleX(1)';
     };
-    const confirm = () => {
-      confirmed = true; move(max());
-      slide.classList.add('ok'); label.textContent = 'Confirmed. Now press Clock out'; out.disabled = false;
-      clearTimeout(timer); timer = setTimeout(resetSlide, 8000);
+    const paintCountdown = () => {
+      const left = Math.max(0, WINDOW_MS - (Date.now() - armedAt));
+      const secs = Math.ceil(left / 1000);
+      // The big line says what a tap does; the small one says what the countdown is: the time left to confirm,
+      // after which nothing happens and the track goes back. It is not a countdown to clocking out.
+      const line = document.createElement('span'); line.className = 'armtxt';
+      const main = Object.assign(document.createElement('span'), { className: 'armmain', textContent: 'Tap to clock out' });
+      const sub = Object.assign(document.createElement('span'), { className: 'armsub' });
+      sub.append(document.createTextNode('Cancels in '), Object.assign(document.createElement('b'), { textContent: secs + 's' }));
+      line.append(main, sub);
+      label.replaceChildren(line);
+      slide.classList.toggle('hurry', secs <= 3);
+      bar.style.transform = 'scaleX(' + (left / WINDOW_MS).toFixed(3) + ')';
+      if (left <= 0) resetSlide();
     };
-    out.addEventListener('click', () => {
-      if (!confirmed) return;
-      out.disabled = true;
+    const arm = () => {
+      armed = true; armedAt = Date.now(); slide.classList.remove('drag'); move(max());
+      slide.classList.add('armed');
+      // the track is the button now; the knob is only the cancel x
+      knob.setAttribute('role', 'button'); knob.setAttribute('aria-label', 'Cancel clock out');
+      slide.setAttribute('role', 'button'); slide.setAttribute('tabindex', '0'); slide.setAttribute('aria-label', 'Clock out now');
+      paintCountdown(); stopTimer(); timer = setInterval(paintCountdown, 100);
+      slide.focus({ preventScroll: true });
+    };
+    const clockOutNow = () => {
+      if (!armed) return;
+      stopTimer();
       if (live) window.bpoTime.clockOut().then(r => toast(r.message, !r.ok));
       else { s.state = 'out'; toast('Clocked out. You worked ' + hm(s.workedMs) + ' today.'); render(); }
       resetSlide();
+    };
+    // A tap on the track (not the x) confirms. The click that ends the slide gesture is ignored.
+    slide.addEventListener('click', e => {
+      if (!armed || knob.contains(e.target) || Date.now() - armedAt < 400) return;
+      clockOutNow();
+    });
+    slide.addEventListener('keydown', e => {
+      if (armed && e.target === slide && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); clockOutNow(); }
+      else if (armed && e.key === 'Escape') resetSlide();
     });
     const release = () => {
-      if (!dragging) return; dragging = false;
-      if (pos >= max() * 0.95) confirm(); else resetSlide();
+      if (!dragging) return; dragging = false; slide.classList.remove('drag');
+      if (pos >= max() * 0.95) arm(); else resetSlide();
     };
     knob.addEventListener('pointerdown', e => {
-      if (confirmed) { resetSlide(); return; }   // grabbing a confirmed slider cancels it
-      dragging = true; startX = e.clientX - pos; slide.classList.remove('snap'); knob.setPointerCapture(e.pointerId);
+      if (armed) { resetSlide(); return; }   // the x cancels
+      dragging = true; slide.classList.add('drag'); startX = e.clientX - pos; slide.classList.remove('snap'); knob.setPointerCapture(e.pointerId);
     });
     knob.addEventListener('pointermove', e => { if (dragging) move(e.clientX - startX); });
     knob.addEventListener('pointerup', release);
     knob.addEventListener('pointercancel', release);
-    // Keyboard: Right arrow moves it along in steps and confirms at the end; Left or Escape cancels.
+    // Keyboard: Right arrow moves the knob along in steps and arms it at the end; Left or Escape cancels.
     knob.addEventListener('keydown', e => {
-      if (e.key === 'ArrowRight' && !confirmed) { move(pos + max() / 4); if (pos >= max() * 0.95) confirm(); }
+      if (e.key === 'ArrowRight' && !armed) { move(pos + max() / 4); if (pos >= max() * 0.95) arm(); }
       else if (e.key === 'ArrowLeft' || e.key === 'Escape') resetSlide();
     });
   })();
+  $('whoami').onclick = () => window.bpoTime ? window.bpoTime.openPortal('profile') : toast('This would open your profile in the portal.');
   $('minimize').onclick = () => {
     if (window.bpoTime) window.bpoTime.minimize();
     else toast('In the app this sends the panel behind your other windows. Open it again from the tray.');
   };
-  $('priv').onclick = () => $('drawer').classList.toggle('open');
-  $('portal').onclick = () => toast('This would open the BPO Portal in your browser.');
-  $('notif').parentElement.onclick = () => toast('This would open your notifications in the portal.');
-  $('todo').parentElement.onclick = () => toast('This would open your to-dos in the portal.');
+  // Light / dark: this app's own choice, remembered on this PC. It does not follow the portal's theme.
+  function applyTheme(t) {
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem('bpotime:theme', t); } catch (e) { /* storage blocked: just not remembered */ }
+    $('themeBtn').textContent = t === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+  }
+  try { applyTheme(localStorage.getItem('bpotime:theme') === 'light' ? 'light' : 'dark'); } catch (e) { applyTheme('dark'); }
+  $('themeBtn').onclick = () => {
+    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+    closeMenu();
+  };
+  // Quick links: the pages people reach for most. The app only opens pages from a fixed list (see main.ts).
+  for (const b of document.querySelectorAll('.ql')) {
+    b.onclick = () => window.bpoTime ? window.bpoTime.openPortal(b.dataset.page) : toast('This would open ' + b.title + ' in the portal.');
+  }
+  // Starting a break copies "Taking my break" / "Taking my lunch", and ending it copies "Back from break" / "Back from lunch",
+  // for pasting into a chat. On by default; it replaces whatever was on the clipboard, so it can be switched off here.
+  let copyOn = true;
+  try { copyOn = localStorage.getItem('bpotime:copybreak') !== '0'; } catch (e) { /* storage blocked: stays on */ }
+  const paintCopy = () => { $('copyBtn').textContent = 'Copy break message: ' + (copyOn ? 'On' : 'Off'); $('copyBtn').setAttribute('aria-checked', String(copyOn)); };
+  paintCopy();
+  $('copyBtn').onclick = () => {
+    copyOn = !copyOn; paintCopy();
+    try { localStorage.setItem('bpotime:copybreak', copyOn ? '1' : '0'); } catch (e) { /* not remembered */ }
+  };
+  // Footer: one "More" button holds What's recorded, Open portal and Sign out, so none is one slip away.
+  const closeMenu = () => { $('menu').hidden = true; $('more').setAttribute('aria-expanded', 'false'); disarmSignOut(); };
+  $('more').onclick = () => {
+    const open = $('menu').hidden;
+    $('menu').hidden = !open; $('more').setAttribute('aria-expanded', String(open));
+    if (!open) disarmSignOut();
+  };
+  document.addEventListener('click', e => { if (!e.target.closest('#menu, #more')) closeMenu(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+  // Sign out takes two taps: the first one arms it, and it disarms itself after 4 seconds.
+  let soTimer = null, soArmed = false;
+  function disarmSignOut() {
+    clearTimeout(soTimer); soArmed = false;
+    $('signout').classList.remove('armed'); $('signout').textContent = 'Sign out of this PC';
+  }
+  function signOutTwice() {
+    if (!soArmed) {
+      soArmed = true; $('signout').classList.add('armed'); $('signout').textContent = 'Tap again to sign out';
+      soTimer = setTimeout(disarmSignOut, 4000); return;
+    }
+    disarmSignOut(); closeMenu();
+    if (window.bpoTime) window.bpoTime.signOut();
+  }
+  $('signout').onclick = signOutTwice;
+  $('priv').onclick = () => { closeMenu(); $('drawer').classList.toggle('open'); };
+  // the floating note closes on a click elsewhere or Escape
+  document.addEventListener('click', e => { if (!e.target.closest('#drawer, #priv')) $('drawer').classList.remove('open'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('drawer').classList.remove('open'); });
+  $('portal').onclick = () => { closeMenu(); toast('This would open the BPO Portal in your browser.'); };
+  $('notifCard').onclick = () => window.bpoTime ? window.bpoTime.openPortal('notifications') : toast('This would open your notifications in the portal.');
+  $('todoCard').onclick = () => window.bpoTime ? window.bpoTime.openPortal() : toast('This would open your to-dos in the portal.');
 
   $('simIdle').onclick = () => {
     if (s.state !== 'in') return toast('Clock in first, idle is only counted while you are clocked in.', true);
@@ -379,14 +763,29 @@
     if (window.bpoTime) {
       // Real data now: the demo controls, the made-up shift and the made-up counts do not belong here.
       sim.remove();
-      $('shift').firstChild.textContent = 'Not clocked in yet';
-      $('late').textContent = 'Press Clock in to start your time';
-      $('notif').textContent = '-';
-      $('todo').textContent = '-';
+      const paintCounts = c => {
+        // not known -> '-', a real zero stays 0
+        const show = v => (typeof v === 'number' ? String(v) : '-');
+        $('notif').textContent = show(c && c.notifications);
+        $('todo').textContent = show(c && c.todos);
+      };
+      paintCounts(null);
+      window.bpoTime.onFeed(paintFeed);
+      // version, and "Restart to update" once a newer version has been downloaded
+      const showUpdate = v => { if (v) { $('updateBtn').hidden = false; $('updateBtn').textContent = 'Restart to update to ' + v; } };
+      window.bpoTime.appVersion().then(i => { $('ver').hidden = false; $('ver').textContent = 'BPO Time ' + i.version; showUpdate(i.updateReady); });
+      window.bpoTime.onUpdateReady(showUpdate);
+      $('updateBtn').onclick = () => window.bpoTime.installUpdate();
+      window.bpoTime.getFeed().then(paintFeed);
+      window.bpoTime.onCounts(paintCounts);
+      window.bpoTime.getCounts().then(paintCounts);
       window.bpoTime.onAttendance(applyAttendance);
       window.bpoTime.getAttendance().then(applyAttendance);
-      $('portal').onclick = () => window.bpoTime.openPortal();
-      $('signout').onclick = () => window.bpoTime.signOut();
+      $('portal').onclick = () => { closeMenu(); window.bpoTime.openPortal(); };
+      // Minimize only shows while another app window is open to go behind.
+      const showMinimize = can => { $('minimize').hidden = !can; };
+      window.bpoTime.onCanMinimize(showMinimize);
+      window.bpoTime.canMinimize().then(showMinimize);
       window.bpoTime.onAuth(applyAuth);
       window.bpoTime.onToast(toast);
       window.bpoTime.getAuth().then(applyAuth);

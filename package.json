@@ -1,19 +1,72 @@
 {
   "name": "bpo-time",
-  "version": "0.0.1",
-  "description": "BPO Time: desktop sidebar for the BPO Portal (mockup stage)",
+  "version": "0.1.0",
+  "description": "BPO Time: desktop sidebar for the BPO Portal",
   "private": true,
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
-    "start": "tsc && node scripts/start.js"
+    "start": "tsc && node scripts/start.js",
+    "icon": "node scripts/make-icon.js",
+    "dist": "tsc && electron-builder --win --publish never",
+    "dist:dir": "tsc && electron-builder --win --dir --publish never"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
     "electron": "^44.7.2",
+    "electron-builder": "^26.15.3",
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "koffi": "^3.3.3"
+  },
+  "author": "JAE Philus OPC",
+  "build": {
+    "appId": "com.philus.bpotime",
+    "productName": "BPO Time",
+    "copyright": "JAE Philus OPC",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "mockup/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "BPO-Time-Setup.exe",
+      "shortcutName": "BPO Time"
+    },
+    "protocols": [
+      {
+        "name": "BPO Time",
+        "schemes": [
+          "bpotime"
+        ]
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ashlerick",
+        "repo": "BPO-Time"
+      }
+    ]
   }
 }

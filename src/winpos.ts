@@ -23,6 +23,7 @@ export function sendToTop(hwnd: number): void {
 }
 
 const dwmapi = process.platform === "win32" ? koffi.load("dwmapi.dll") : null;
+const MonitorFromWindow = user32 ? user32.func("intptr __stdcall MonitorFromWindow(intptr hWnd, uint32 flags)") : null;
 const GetTopWindow = user32 ? user32.func("intptr __stdcall GetTopWindow(intptr hWnd)") : null;
 const GetWindow = user32 ? user32.func("intptr __stdcall GetWindow(intptr hWnd, uint32 cmd)") : null;
 const IsWindowVisible = user32 ? user32.func("bool __stdcall IsWindowVisible(intptr hWnd)") : null;
@@ -34,6 +35,7 @@ const DwmGetWindowAttribute = dwmapi
   : null;
 
 const GW_HWNDNEXT = 2;
+const MONITOR_DEFAULTTONEAREST = 2;
 const DWMWA_CLOAKED = 14;
 
 function className(hwnd: number): string {
@@ -46,6 +48,39 @@ function isCloaked(hwnd: number): boolean {
   const out = [0];
   DwmGetWindowAttribute?.(hwnd, DWMWA_CLOAKED, out, 4);
   return out[0] !== 0;
+}
+
+// A real app window: visible, not minimized, has a title, not cloaked by Windows (hidden system windows,
+// other virtual desktops), and not the desktop's own helper window. Taskbars have no title, so they never count.
+function isAppWindow(hwnd: number, cls: string): boolean {
+  return !!(
+    IsWindowVisible?.(hwnd) &&
+    !IsIconic?.(hwnd) &&
+    (GetWindowTextLengthW?.(hwnd) ?? 0) > 0 &&
+    !isCloaked(hwnd) &&
+    cls !== "WorkerW"
+  );
+}
+
+/**
+ * How many other app windows are open on the SAME monitor as the panel (the panel itself excluded). Zero means
+ * nothing could go in front of the panel or behind it there, so "Minimize" has nothing to do. Windows on
+ * another screen do not count. Walks the window stack down to the desktop.
+ */
+export function openAppWindows(panel: number): number {
+  const panelMonitor = MonitorFromWindow?.(panel, MONITOR_DEFAULTTONEAREST) ?? 0;
+  let count = 0;
+  let hwnd = GetTopWindow?.(0) ?? 0;
+  for (let i = 0; hwnd && i < 500; i++) {
+    if (hwnd !== panel) {
+      const cls = className(hwnd);
+      if (cls === "Progman") break;
+      // a window belongs to the monitor that holds most of it
+      if (isAppWindow(hwnd, cls) && (MonitorFromWindow?.(hwnd, MONITOR_DEFAULTTONEAREST) ?? 0) === panelMonitor) count++;
+    }
+    hwnd = GetWindow?.(hwnd, GW_HWNDNEXT) ?? 0;
+  }
+  return count;
 }
 
 /**
@@ -64,15 +99,7 @@ export function desktopState(panel: number): { desktopOnTop: boolean; panelBelow
     } else {
       const cls = className(hwnd);
       if (cls === "Progman") return { desktopOnTop: appsAbove === 0, panelBelowDesktop: !panelAbove };
-      if (
-        IsWindowVisible?.(hwnd) &&
-        !IsIconic?.(hwnd) &&
-        (GetWindowTextLengthW?.(hwnd) ?? 0) > 0 &&
-        !isCloaked(hwnd) &&
-        cls !== "WorkerW"
-      ) {
-        appsAbove++;
-      }
+      if (isAppWindow(hwnd, cls)) appsAbove++;
     }
     hwnd = GetWindow?.(hwnd, GW_HWNDNEXT) ?? 0;
   }
