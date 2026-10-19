@@ -62,6 +62,8 @@ function set(next: AttendanceState): void {
 /** Pull today's record. Offline keeps what we have: that is a normal state, not an error. */
 export async function refresh(): Promise<void> {
   const r = await auth.api("/hr/device-today", "GET");
+  // A reply that lands after this PC was signed out must not put someone's data back on the panel.
+  if (auth.getState().status !== "signedIn") return;
   if (r.kind === "ok") set(r.body as Attendance);
   else if (r.kind === "error" && auth.getState().status === "signedIn") set({ error: r.message });
 }
@@ -101,8 +103,9 @@ export function follow(state: auth.AuthState): void {
   if (signedIn && !timer) {
     void refresh();
     timer = setInterval(() => void refresh(), REFRESH_MS);
-  } else if (!signedIn && timer) {
-    clearInterval(timer);
+  } else if (!signedIn) {
+    // Whenever nobody is signed in (including at startup), nothing of anyone's is kept.
+    if (timer) clearInterval(timer);
     timer = null;
     set(null);
   }

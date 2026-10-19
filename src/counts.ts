@@ -34,6 +34,8 @@ const asCount = (v: unknown): number | null => (typeof v === "number" && Number.
 /** Pull the counts. Offline keeps what we have; any other failure shows "-" rather than a wrong number. */
 export async function refresh(): Promise<void> {
   const r = await auth.api("/hr/device-counts", "GET");
+  // A reply that lands after this PC was signed out must not put someone's data back on the panel.
+  if (auth.getState().status !== "signedIn") return;
   if (r.kind === "ok") {
     const body = r.body as { notifications?: unknown; todos?: unknown };
     set({ notifications: asCount(body.notifications), todos: asCount(body.todos) });
@@ -48,8 +50,9 @@ export function follow(state: auth.AuthState): void {
   if (signedIn && !timer) {
     void refresh();
     timer = setInterval(() => void refresh(), REFRESH_MS);
-  } else if (!signedIn && timer) {
-    clearInterval(timer);
+  } else if (!signedIn) {
+    // Whenever nobody is signed in (including at startup), nothing of anyone's is kept.
+    if (timer) clearInterval(timer);
     timer = null;
     set(UNKNOWN);
   }
