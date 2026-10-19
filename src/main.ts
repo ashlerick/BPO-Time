@@ -19,6 +19,9 @@ let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let shown = true;
 let liftedForDesktop = false;
+// On a break the panel comes to the front and stays there, so the break timer is in view. It never moves by itself afterwards: the person
+// puts it back with Minimize.
+let stayOnTop = false;
 let hwnd = 0;
 
 function crc32(buf: Buffer): number {
@@ -107,14 +110,27 @@ function place(): void {
   if (!win) return;
   const area = screen.getPrimaryDisplay().workArea;
   win.setBounds({ x: area.x + area.width - WIDTH, y: area.y, width: WIDTH, height: area.height });
-  sendToBottom(hwnd);
+  if (!stayOnTop) sendToBottom(hwnd);
 }
 
 // "Minimize" does not hide anything: it pushes the panel behind your apps. It stays on the desktop,
 // so the bare desktop is never shown without it.
 function minimize(): void {
   if (!win) return;
+  stayOnTop = false; // this is how the break's stay-on-top is ended: by hand
+  win.setAlwaysOnTop(false);
   sendToBottom(hwnd);
+}
+
+// A break started: bring the panel in front of everything and keep it there until Minimize is pressed.
+function holdOnTop(): void {
+  if (!win) return;
+  stayOnTop = true;
+  shown = true;
+  place();
+  win.showInactive();
+  win.setAlwaysOnTop(true);
+  sendToTop(hwnd);
 }
 
 // Bring the panel in front of the other apps (from the tray). It drops back behind them as soon as you
@@ -129,6 +145,7 @@ function raise(): void {
   sendToTop(hwnd);
   win.setAlwaysOnTop(false);
   sendToTop(hwnd);
+  if (stayOnTop) win.setAlwaysOnTop(true);
 }
 
 // "Show desktop" (Win+D or the corner button) lifts the desktop above every window, which would cover the
@@ -143,8 +160,8 @@ function keepAboveShownDesktop(): void {
     liftedForDesktop = true;
   } else if (!s.desktopOnTop && liftedForDesktop) {
     liftedForDesktop = false;
-    win.setAlwaysOnTop(false);
-    sendToBottom(hwnd);
+    win.setAlwaysOnTop(stayOnTop);
+    if (!stayOnTop) sendToBottom(hwnd);
   }
 }
 
@@ -197,7 +214,7 @@ function createWindow(): void {
   win.on("minimize", () => {
     // Win+D (Show desktop) minimizes every window; the panel stays. Our own minimize uses hide().
     win?.showInactive();
-    sendToBottom(hwnd);
+    if (!stayOnTop) sendToBottom(hwnd);
   });
   win.loadFile(path.join(__dirname, "..", "mockup", "index.html"), { query: { app: "1" } });
 }
@@ -322,7 +339,14 @@ app.whenReady().then(() => {
   ipcMain.handle("counts:refresh", () => counts.refresh());
   ipcMain.handle("feed:refresh", () => feed.refresh());
   ipcMain.handle("attendance:refresh", () => attendance.refresh());
-  attendance.onChange((a) => win?.webContents.send("attendance:state", a));
+  // A break starts (it was not running a moment ago): the panel comes to the front and stays until Minimize.
+  let wasOnBreak = false;
+  attendance.onChange((a) => {
+    win?.webContents.send("attendance:state", a);
+    const onBreak = !!a && "breaks" in a && a.breaks.some((b) => b.status === "taken" && !!b.startedAt && !b.endedAt);
+    if (onBreak && !wasOnBreak) holdOnTop();
+    wasOnBreak = onBreak;
+  });
   ipcMain.handle("attendance:get", () => attendance.get());
   // Clocking in copies "Good morning, clock in!" and clocking out copies "Good night, clock out!" (same on/off switch as
   // the break messages). Only when this press really changed something: pressing again while already in, or out, copies nothing.

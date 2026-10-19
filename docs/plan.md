@@ -70,6 +70,7 @@ Option C was chosen. Idle tracking (B, and the idle part of C) was dropped: time
   other apps. Desktop icons stay put and apps can sit on top of it.
 - Tried and replaced: an always-on-top window, then true docking as a Windows AppBar (reserving screen
   space). The bottom-most widget won so that icons stay put (commit 161c32a).
+- When a break starts the panel comes to the front of every window and stays there; it never moves by itself afterwards, and Minimize puts it back behind the apps.
 - It stays above the desktop during Show desktop. The tray's Show panel raises it above apps until another
   app is used; Minimize sends it behind apps.
 
