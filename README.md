@@ -18,7 +18,7 @@ work time and syncs with the portal, so the PC and the portal's Attendance page 
 
 ## Breaks and lunch (rules agreed 2026-10-16)
 
-Pending HR's confirmation, these are the rules the app is built to. They are all in one place in the
+These are the rules the app is built to. They are all in one place in the
 portal's `backend/lib/breaks.ts`, so changing a number or a rule later is a small edit.
 
 - **Three slots a day, in order:** morning break (10 min), lunch (30 min), afternoon break (10 min).
