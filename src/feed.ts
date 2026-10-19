@@ -6,7 +6,20 @@ import * as auth from "./auth";
 import * as sync from "./sync";
 
 export interface Feed {
-  announcements: Array<{ id: string; title: string; category: string; preview: string; publishAt: string; featured?: boolean; needsAck?: boolean }>;
+  announcements: Array<{
+    id: string;
+    title: string;
+    category: string;
+    preview: string;
+    publishAt: string;
+    featured?: boolean;
+    needsAck?: boolean;
+    emergency?: boolean;
+    /** An event: its day, the real moment when it has a time, the place, and whether it is mandatory. */
+    event?: { date: string | null; at: string | null; place: string | null; mandatory: boolean } | null;
+    /** The deadline, while this person still has the to-do open. */
+    due?: { date: string | null; at: string | null } | null;
+  }>;
   birthdays: Array<{ name: string; firstName: string; isMe: boolean }>;
 }
 

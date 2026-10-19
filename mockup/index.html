@@ -212,6 +212,9 @@
   /* an emergency: red, and always first (the portal sends it first) */
   .ann.emergency { border-color: var(--bad); background: rgba(229,83,75,.14); }
   .ann.emergency small { color: var(--bad); font-weight: 700; }
+  /* an event or a deadline on an announcement */
+  .ann .evt { display: block; margin-top: 4px; font-size: 12px; color: var(--ink); }
+  .ann .evt.due { color: var(--warn); font-weight: 600; }
   .chip:hover, .ann:hover { border-color: var(--brand-hi); background: var(--panel); }
   .chip:focus-visible, .ann:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
   .bday { position: relative; isolation: isolate; overflow: hidden; border-radius: 10px; padding: 8px 30px 8px 12px; text-align: center; font-size: 12px; line-height: 1.35;
@@ -488,6 +491,10 @@
     news.replaceChildren();
     $('newsWrap').hidden = false;
     if (items.length === 0) { const none = document.createElement('p'); none.className = 'none'; none.textContent = 'Nothing highlighted for you right now.'; news.appendChild(none); }
+    // When something happens, in both zones (or just the day when there is no time).
+    const zoneAt = (iso, tz) => new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: tz }).format(new Date(iso));
+    const dayOnly = d => new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(d));
+    const whenOf = (at, date) => at ? zoneAt(at, 'America/Los_Angeles') + ' CA · ' + zoneAt(at, 'Asia/Manila') + ' PH' : date ? dayOnly(date) : '';
     for (const a of items) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'ann'; b.dataset.tip = 'Open in the portal'; b.dataset.tipPos = 'inside';
       const cat = document.createElement('small'); cat.textContent = (a.emergency ? '⚠ Emergency · ' : a.featured ? '★ Highlighted · ' : '') + a.category;
@@ -496,6 +503,16 @@
       const title = document.createElement('b'); title.textContent = a.title;
       const prev = document.createElement('span'); prev.textContent = a.preview;
       b.append(cat, title, prev);
+      if (a.event) {
+        const ev = document.createElement('span'); ev.className = 'evt';
+        ev.textContent = 'Event: ' + whenOf(a.event.at, a.event.date) + (a.event.place ? ' · ' + a.event.place : '') + (a.event.mandatory ? ' · mandatory' : '');
+        b.append(ev);
+      }
+      if (a.due) {
+        const du = document.createElement('span'); du.className = 'evt due';
+        du.textContent = 'Due: ' + whenOf(a.due.at, a.due.date);
+        b.append(du);
+      }
       // a notice that asks for a "Got it" which this person has not given yet
       if (a.needsAck) { const need = document.createElement('span'); need.className = 'need'; need.textContent = 'Needs your Got it'; b.append(need); }
       b.onclick = () => window.bpoTime ? window.bpoTime.openPortal('announcements', a.id) : toast('This would open the announcement in the portal.');
