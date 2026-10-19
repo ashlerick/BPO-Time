@@ -148,7 +148,7 @@ Rules:
 ## 6. Privacy and policy
 
 - Covered by the Philippines Data Privacy Act (RA 10173): written policy, notice to employees,
-  proportionate purpose. This document is not legal advice. HR has agreed and the policy is updated.
+  proportionate purpose. This document is not legal advice.
 - The app records **clock-in, clock-out and break times only**. No idle tracking, screenshots, keystroke
   logging, window titles or app names unless there is a strong, documented reason.
 - The person sees their own record in the panel and on the portal's Attendance page.
@@ -180,12 +180,10 @@ Rules:
 5. [x] **Is a PC lock (shop-style session control) in scope?** No. The app never locks or blocks the PC.
 6. [x] **Does anything beyond time belong on the panel?** Yes, and built: announcements, birthdays, quick
    links, shift status, "Got it" acknowledgements.
-7. [x] **Has HR agreed to monitoring, and is the policy updated?** Yes.
-8. [x] **Idle detection?** No. It was never built and is dropped from the plan.
+7. [x] **Idle detection?** No. It was never built and is dropped from the plan.
 
 ## 10. Decision
 
 - [x] Build the Windows panel (Electron). Shipped as version 0.1.1 with installer and auto-update.
 - [x] Time only: clock in and clock out, no idle, no screenshots, no keystrokes, no window titles.
 - [x] No PC lock.
-- [x] HR has agreed, and the policy is updated.
