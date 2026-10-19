@@ -3,19 +3,18 @@
 A small Windows sidebar app for the [BPO Portal](https://github.com/ashlerick/BPO-Portal): it tracks
 work time and syncs with the portal, so the PC and the portal's Attendance page always agree.
 
-**Status: version 0.1.0 (beta).** Windows only. Installer and update steps: [docs/release.md](./docs/release.md).
+**Status: version 0.1.1 (beta).** Windows only. Installer and update steps: [docs/release.md](./docs/release.md).
 
 - Why this exists and what was decided: [docs/context.md](./docs/context.md)
 - The design: [docs/plan.md](./docs/plan.md)
 - Instructions for a coding session (Claude or a person): [CLAUDE.md](./CLAUDE.md)
 
-## What it will do
+## What it does
 
 - Sit as a slim panel on the edge of the desktop, starting with Windows.
 - Clock in and out, take breaks and lunch, and show today's and this week's time.
-- Pause on real system idle, and keep working offline then sync when the connection returns.
-- Sign in with **"Login with portal"**: the browser opens the portal, you allow this PC, and the app
-  receives a one-time code. The app never sees your password.
+- Sign in from the portal: press **Launch App (BETA)** in the portal and the app receives a one-time code.
+  The app never sees your password.
 
 ## Breaks and lunch (rules agreed 2026-10-16)
 
@@ -55,14 +54,14 @@ portal's `backend/lib/breaks.ts`, so changing a number or a rule later is a smal
 |---|---|---|
 | Repo | `ashlerick/BPO-Portal` | `ashlerick/BPO-Time` (this repo) |
 | Hosts | GitHub Pages and Vercel | Windows PCs, installer from this repo's Releases |
-| Talks to | Its own database | The portal's API only (versioned, `/api/device/v1/...`) |
+| Talks to | Its own database | The portal's API only (`/hr/device-*` endpoints) |
 
-The portal's website shows a **Desktop app** download button that points at this repo's latest release.
-It stays hidden until the first release exists.
+The portal's website shows a **Launch App (BETA)** button that opens the app, and offers this repo's latest release as the download if it is not installed.
+It is live for everyone on a Windows PC.
 
 ## Privacy
 
-Time and idle only. No screenshots, no keystroke logging, no window titles. The person always sees
+Clock-in, clock-out and break times only. No idle tracking, no screenshots, no keystroke logging, no window titles. The person always sees
 exactly what is recorded about them. See section 6 of the plan.
 
 ## Working on it

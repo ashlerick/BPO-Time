@@ -1,12 +1,12 @@
 # BPO Time: instructions for a coding session
 
 Read this first, then [docs/context.md](./docs/context.md) (why this exists and what was decided) and
-[docs/plan.md](./docs/plan.md) (the design). Nothing here is built yet: this repo holds the plan.
+[docs/plan.md](./docs/plan.md) (the design). The app is built and shipping (version 0.1.1); the plan describes what exists.
 
 ## What this repo is
 
 The Windows desktop sidebar app for the **BPO Portal** (JAE Philus OPC / Philus BPO Services). A slim
-panel docked to the screen edge that tracks work time and syncs it with the portal. It is a separate
+panel on the screen edge for clocking in and out, breaks and lunch, and quick access to the portal. It writes to the same attendance record as the portal. It is a separate
 product from the portal and has its own repo, deliberately.
 
 - Portal repo (the thing it talks to): https://github.com/ashlerick/BPO-Portal (public).
@@ -24,7 +24,7 @@ product from the portal and has its own repo, deliberately.
    project (several small deploys caused failed builds and error emails). Applies here too.
 3. **No attribution lines** in commit messages or PR descriptions (no `Co-Authored-By`, no "Generated
    with"). Commit messages are plain.
-4. **Privacy first.** Record **time and idle only**. No screenshots, no keystroke logging, no window or
+4. **Privacy first.** Record **clock-in, clock-out and break times only**. No idle tracking, screenshots, keystroke logging, window or
    app titles, unless the user explicitly asks and HR has approved a documented reason. The employee
    must be able to see exactly what is recorded about them. This is about real people's data under the
    Philippines Data Privacy Act (RA 10173).
@@ -44,76 +44,55 @@ product from the portal and has its own repo, deliberately.
 
 (Full detail: `docs/plan.md`.)
 
-- **Technology:** Electron + TypeScript (recommended; same stack as the portal). Tauri is the lighter
-  alternative. Windows only for v1.
-- **Panel:** name and status, today's time (large), week total, Clock in, slide to clock out, shift and
-  lateness, unread notifications and to-dos due, sync indicator, collapse to a thin bar, tray icon,
-  auto-start with Windows.
-- **Docking:** v1 is an always-on-top frameless window at the screen edge; true docking (reserving
-  space like the taskbar via the Windows AppBar API) comes after the basics work.
-- **Idle:** from the OS (`powerMonitor.getSystemIdleTime`), not the browser.
-- **Sync:** upload 5-minute blocks (`active` or `idle`) to the portal API, queue offline, server clock is
-  the reference. The app also reads today's and the week's totals back so it and the portal agree.
-- **It is NOT a lock screen.** Shop-style session locking is out of scope (large, risky).
+- **Technology:** Electron + TypeScript (same stack as the portal). Windows only.
+- **Panel:** name and status, today's time (large), week total, Clock in, slide to clock out, breaks and lunch, shift and
+  lateness, unread notifications and to-dos due, highlighted announcements, birthdays, quick links, light and dark theme,
+  tray icon, auto-start with Windows, auto-update.
+- **Docking:** a frameless bottom-most desktop widget on the right edge (above the desktop, below other apps).
+  A reserved-space AppBar was tried and replaced so desktop icons stay put.
+- **No idle detection.** Decided 2026-10-19; do not add it.
+- **Sync:** direct calls to the portal's `/hr/device-*` endpoints; the server clock is the reference. No offline queue:
+  with no connection a clock action is refused with a clear message.
+- **It is NOT a lock screen** and never locks the PC. Decided 2026-10-19.
 
-### Sign-in: "Login with portal" (do exactly this)
+### Sign-in: "Launch App" from the portal (built; do not change the shape)
 
-Browser handoff with a one-time code and PKCE, so the app never handles the password:
+The app never sees the password. The portal's **Launch App (BETA)** button asks the API for a one-time code
+(`POST /hr/device-code`, 60 seconds) and opens `bpotime://connect?code=<code>`. The app swaps the code for a
+**device token** (`POST /hr/device-token`), calls `GET /hr/device-me` to show the name, and stores the token
+encrypted with Windows DPAPI (`safeStorage`; memory only if that is unavailable, never plain text).
 
-1. App creates a random secret + its hash and starts a sign-in request with the API.
-2. App opens `https://ashlerick.github.io/BPO-Portal/connect-app?...` in the default browser.
-3. User signs in (or is already signed in) and sees "Allow BPO Time on this PC (NAME)?".
-4. On Allow the portal returns a **short-lived single-use code** to the app via a loopback address
-   (`http://127.0.0.1:<port>`) or the app's own scheme (`bpotime://`). **Only those two destinations are
-   allowed.**
-5. App exchanges code + secret for a **device token** over a direct HTTPS call.
+The device token is separate from the browser session, accepted only by the device endpoints, revocable per
+device (Settings > Desktop app in the portal), and dead when the account is deactivated (401 means ask to Launch
+App again). Never put the portal's own JWT or the device token in a URL. The app uses its own API base constant
+and ignores any address in a link. Dropped: a `/connect-app` page, a loopback address, a typed-code fallback.
 
-The device token is separate from the browser session, scoped to time tracking only (cannot reach payroll
-or HR pages), revocable per device, dead when the account is deactivated, and stored in the Windows
-credential store. Never put the portal's own JWT in a URL. Fallback for locked-down PCs: show a short
-code the person types at `/connect` on another device.
+## The portal side
 
-## The portal side (what already exists, and what does not)
+Built in the portal repo (see `docs/plan.md` section 5.5):
 
-Exists in the portal repo:
-
-- `POST /api/auth/login` (email + password) returns a JWT (HS256, 8 hour expiry, payload
-  `{sub, email, roles}`). Roles: `employee`, `team_leader`, `manager`, `hr`, `admin`.
-- Attendance: `GET /api/leave/attendance/today`, `POST /api/leave/attendance/checkin`,
-  `POST /api/leave/attendance/checkout`. One `AttendanceRecord` per employee per day
-  (`checkInAt`, `checkOutAt`, IPs). Check-in happens automatically at portal login.
-- Shift schedules (templates with grace minutes and working days, assigned per employee) used for
-  late/undertime reports.
-- A **"Desktop app" download button** in the portal header, hidden behind `DESKTOP_APP_READY = false` in
-  `frontend/src/components/ui/DesktopAppButton.tsx`. It points at this repo's latest GitHub release asset
-  `BPO-Time-Setup.exe`. When the first release exists, set the flag to `true`.
-
-Does **not** exist yet (must be built in the portal repo, not here):
-
-- The device sign-in endpoints (start, approve, exchange), the `/connect-app` page and the "My devices"
-  list in Settings.
-- The `devices` and `time_blocks` tables, and the upload and summary endpoints.
-- Keep the app's API small, **versioned** (`/api/device/v1/...`) and documented in `docs/plan.md`. The
-  two repos meet only at that API.
+- Device endpoints on the portal's `hr` dispatcher: `device-code`, `device-token`, `device-me`, `device-today`,
+  `device-clock-in`, `device-clock-out`, `device-break-start`, `device-break-end`, `device-counts`, `device-feed`,
+  plus `GET /hr/devices` and `DELETE /hr/devices/:id`. Treat these paths as the contract; changing one means
+  changing both repos.
+- Break rules in `backend/lib/breaks.ts`. Shift schedules (grace minutes, working days) drive late reporting.
+- The **Launch App (BETA)** button in the portal header (`frontend/src/components/ui/DesktopAppButton.tsx`),
+  live (`DESKTOP_APP_READY = true`), downloading this repo's latest release `BPO-Time-Setup.exe`.
 
 Portal constraints that affect this app: Vercel **Hobby plan allows 12 functions and the portal is at 12**,
 so new endpoints must go inside an existing dispatcher (`hr`, `portal`, `content`, `restricted`,
 `leave`), not new files. Functions time out at 10 seconds. The database is Neon free tier.
 
-## Open decisions (ask the user before assuming)
+## Decisions (2026-10-19)
 
-See section 9 of `docs/plan.md`. Not yet decided: Windows only vs Macs, who it is for and how many,
-dock vs float, whether anything beyond time belongs on the panel, whether HR has agreed to monitoring
-and updated the policy. Also undecided: Electron vs Tauri (Electron recommended).
+All the earlier open questions are decided; see sections 9 and 10 of `docs/plan.md`. It is for time management
+and easy access to the portal, Windows only, around 20 or more people. No idle detection and no PC lock.
+Ask the user before changing any of these.
 
-## First steps when work starts
+## Where the work stands
 
-1. Confirm the open decisions above with the user.
-2. Build a clickable mockup of the panel and get a reaction before any real code.
-3. Milestone 1 (about a week): app shell, "Login with portal", clock in/out, today's total on screen and
-   in the portal. Needs the three portal endpoints above, built and deployed from the portal repo (with
-   the user's go-ahead).
-4. Then idle + breaks + offline queue, then docking/tray/auto-start/installer/signing/auto-update.
+Version 0.1.1 is released with installer and auto-update. Not done: a code-signing certificate and an offline
+queue (which is not planned). Releases: `docs/release.md`. Testing against a staging server: `docs/testing.md`.
 
 ## Conventions once code exists
 

@@ -34,10 +34,10 @@ portal") and keeps its numbers in sync with the portal's Attendance page.
 | Owner | GitHub account `ashlerick`. `Lerick-Ashley-Copia` (the work account used on this PC) is only a collaborator. Do not create repos under it. |
 | Public repo | So the portal's download button can fetch release assets without a login. Nothing secret goes in the repo. |
 | Not a lock screen | The shop-style session lock was judged large and risky (needs a Windows service and admin rights; a bug can lock people out of their PC). |
-| Sign-in | "Login with portal": browser handoff, one-time code and PKCE, device token, revocable. The app never sees the password. See `CLAUDE.md`. |
-| Data collected | Time and idle only. No screenshots, keystrokes or window titles. |
-| Technology | Electron + TypeScript recommended (Tauri is the lighter option). Windows first. |
-| Staging | Portal-side download button already exists but is hidden until a release exists. |
+| Sign-in | Launch App from the portal: one-time code in a `bpotime://connect` link, swapped for a revocable device token. The app never sees the password. See `CLAUDE.md`. |
+| Data collected | Clock-in, clock-out and break times only. No idle, screenshots, keystrokes or window titles. |
+| Technology | Electron + TypeScript. Windows only. |
+| Staging | Testing against a staging server: `docs/testing.md`. The portal button is live. |
 
 ## Options that were considered
 
@@ -47,13 +47,14 @@ D. Buy a product (Clockify, Toggl, Hubstaff, Time Doctor): cheaper if the goal i
 reports. The recommendation was to do A and B first and build C only if they are not enough. The user
 asked to proceed with C as a plan and created this repo for it.
 
-## What is NOT decided
+## What was decided later (2026-10-19)
 
-- Windows only, or Macs too.
-- Who it is for, how many people, remote or office.
-- Dock (reserve space) or float on top.
-- Whether anything beyond time belongs on the panel.
-- Whether HR has agreed to monitoring and updated the company policy. **Do not roll out without it.**
+- It is for time management and easy access to the portal. Windows only. Around 20 or more people.
+- Bottom-most desktop widget (not an AppBar, not always-on-top). Announcements, birthdays and quick links are
+  on the panel.
+- No idle detection. No PC lock.
+
+Everything above this section is the situation as of 2026-10-16. The app has since been built (0.1.1).
 
 ## Where things live
 
