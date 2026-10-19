@@ -3,6 +3,7 @@
 // They read and write the same attendance record as the portal's Attendance page. The server's clock is
 // the reference: every reply carries serverNow, and the panel counts from that, not from the PC clock.
 import * as auth from "./auth";
+import * as sync from "./sync";
 
 export interface Attendance {
   checkedIn: boolean;
@@ -65,7 +66,9 @@ function set(next: AttendanceState): void {
 
 /** Pull today's record. Offline keeps what we have: that is a normal state, not an error. */
 export async function refresh(): Promise<void> {
+  sync.begin();
   const r = await auth.api("/hr/device-today", "GET");
+  sync.done("attendance", r.kind);
   // A reply that lands after this PC was signed out must not put someone's data back on the panel.
   if (auth.getState().status !== "signedIn") return;
   if (r.kind === "ok") set(r.body as Attendance);

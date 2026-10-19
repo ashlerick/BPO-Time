@@ -576,8 +576,10 @@
     if (!showOut) resetSlide();
     $('clock').textContent = done ? 'Clocked out for today' : 'Clock in';
     $('clock').disabled = !auth.signedIn || done || (live && !s.att);
-    $('syncDot').style.background = s.offline ? 'var(--warn)' : 'var(--ok)';
-    $('syncText').textContent = s.offline ? 'Offline - ' + s.queued + ' block(s) queued' : 'Synced';
+    if (!live) {
+      $('syncDot').style.background = s.offline ? 'var(--warn)' : 'var(--ok)';
+      $('syncText').textContent = s.offline ? 'Offline - ' + s.queued + ' block(s) queued' : 'Synced';
+    }
   }
 
   // Real attendance from the portal (app only). The server's clock is the reference: its time at the
@@ -1041,6 +1043,17 @@
       const showMinimize = can => { $('minimize').hidden = !can; };
       window.bpoTime.onCanMinimize(showMinimize);
       window.bpoTime.canMinimize().then(showMinimize);
+      // "Synced" is real: when the panel last read everything from the portal, or that it is updating, offline or out of date.
+      const paintSync = st => {
+        const t = st && st.at ? phClock.format(new Date(st.at)) : '';
+        const set = (color, text, tip) => { $('syncDot').style.background = color; $('syncText').textContent = text; $('syncDot').parentElement.title = tip; };
+        if (!st || st.state === 'updating') set('var(--idle)', 'Updating...', 'Reading from the portal');
+        else if (st.state === 'offline') set('var(--warn)', t ? 'Offline, last synced ' + t : 'Offline', 'Cannot reach the portal. It will try again.');
+        else if (st.state === 'stale') set('var(--warn)', t ? 'Out of date, last synced ' + t : 'Out of date', 'The portal has not answered for a while. Press the refresh button.');
+        else set('var(--ok)', 'Synced ' + t, 'Everything was read from the portal at ' + t + ' (Philippine time)');
+      };
+      window.bpoTime.onSync(paintSync);
+      window.bpoTime.getSync().then(paintSync);
       window.bpoTime.onAuth(applyAuth);
       window.bpoTime.onToast(toast);
       window.bpoTime.getAuth().then(applyAuth);

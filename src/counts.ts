@@ -3,6 +3,7 @@
 // null means "not known" (offline, or the portal has no such endpoint yet), which the panel shows as "-".
 // A real zero stays 0.
 import * as auth from "./auth";
+import * as sync from "./sync";
 
 export interface Counts {
   notifications: number | null;
@@ -33,7 +34,9 @@ const asCount = (v: unknown): number | null => (typeof v === "number" && Number.
 
 /** Pull the counts. Offline keeps what we have; any other failure shows "-" rather than a wrong number. */
 export async function refresh(): Promise<void> {
+  sync.begin();
   const r = await auth.api("/hr/device-counts", "GET");
+  sync.done("counts", r.kind);
   // A reply that lands after this PC was signed out must not put someone's data back on the panel.
   if (auth.getState().status !== "signedIn") return;
   if (r.kind === "ok") {

@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld("bpoTime", {
   refreshCounts: () => ipcRenderer.invoke("counts:refresh"),
   refreshFeed: () => ipcRenderer.invoke("feed:refresh"),
   refreshAttendance: () => ipcRenderer.invoke("attendance:refresh"),
+  getSync: () => ipcRenderer.invoke("sync:get"),
+  onSync: (fn: (s: unknown) => void) => ipcRenderer.on("sync:state", (_e, s) => fn(s)),
   onCounts: (fn: (c: unknown) => void) => ipcRenderer.on("counts:state", (_e, c) => fn(c)),
   quit: () => ipcRenderer.send("app:quit"),
   getAuth: () => ipcRenderer.invoke("auth:get"),

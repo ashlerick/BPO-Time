@@ -3,13 +3,14 @@
 // Only a short preview of each announcement comes down; the full text stays on the portal.
 // Offline keeps what we have; a portal without the endpoint just means an empty feed.
 import * as auth from "./auth";
+import * as sync from "./sync";
 
 export interface Feed {
   announcements: Array<{ id: string; title: string; category: string; preview: string; publishAt: string; featured?: boolean; needsAck?: boolean }>;
   birthdays: Array<{ name: string; firstName: string; isMe: boolean }>;
 }
 
-const REFRESH_MS = 5 * 60_000;
+const REFRESH_MS = 60_000;
 const EMPTY: Feed = { announcements: [], birthdays: [] };
 
 let current: Feed = EMPTY;
@@ -30,7 +31,9 @@ function set(next: Feed): void {
 }
 
 export async function refresh(): Promise<void> {
+  sync.begin();
   const r = await auth.api("/hr/device-feed", "GET");
+  sync.done("feed", r.kind);
   // A reply that lands after this PC was signed out must not put someone's data back on the panel.
   if (auth.getState().status !== "signedIn") return;
   if (r.kind === "ok") {

@@ -1,6 +1,7 @@
-import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
+import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeImage, powerMonitor, screen, shell, Tray } from "electron";
 import * as path from "path";
 import * as zlib from "zlib";
+import * as sync from "./sync";
 import { desktopState, openAppWindows, sendToBottom, sendToTop } from "./winpos";
 import * as auth from "./auth";
 import * as attendance from "./attendance";
@@ -291,8 +292,24 @@ app.whenReady().then(() => {
   ipcMain.on("app:quit", quit);
   ipcMain.handle("auth:get", () => auth.getState());
   ipcMain.on("auth:signout", signOut);
+  // The sync label: when the panel last read everything from the portal (see sync.ts).
+  sync.onChange((s) => win?.webContents.send("sync:state", s));
+  ipcMain.handle("sync:get", () => sync.snapshot());
+  // Read everything again when the PC wakes up or the panel is shown (at most every 15 seconds), so it is never a minute behind.
+  let lastRefreshAll = 0;
+  const refreshAll = () => {
+    if (auth.getState().status !== "signedIn" || Date.now() - lastRefreshAll < 15_000) return;
+    lastRefreshAll = Date.now();
+    void attendance.refresh();
+    void counts.refresh();
+    void feed.refresh();
+  };
+  powerMonitor.on("resume", refreshAll);
+  powerMonitor.on("unlock-screen", refreshAll);
+  win?.on("show", refreshAll);
   auth.onChange((s) => {
     win?.webContents.send("auth:state", s);
+    if (s.status !== "signedIn") sync.reset();
     attendance.follow(s);
     counts.follow(s);
     feed.follow(s);
