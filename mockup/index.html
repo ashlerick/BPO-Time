@@ -11,6 +11,7 @@
     --brand: #158a52; --brand-hi: #1fa763; --gold: #fbbf24; --ok: #34d399; --warn: #f5a623; --bad: #e5534b; --idle: #a78bfa;
     --thumb: rgba(255,255,255,.2); --danger-text: #ff8b84;
     --tip-bg: #020b07; --tip-ink: #ecf5ef;
+    --accent: var(--gold); --accent2: #e5534b;
   }
   /* Light mode: same greens, on a pale page. Switched from the More menu and kept in step with the portal. */
   html[data-theme="light"] {
@@ -18,6 +19,7 @@
     --brand: #158a52; --brand-hi: #0f7a47; --gold: #a15a07; --ok: #0f9d63; --warn: #a15a07; --bad: #c4372c; --idle: #6d4ae0;
     --thumb: rgba(10,40,25,.28); --danger-text: #c4372c;
     --tip-bg: #10261b; --tip-ink: #ffffff;
+    --accent2: #c4372c;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font: 14px/1.4 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--ink); }
@@ -57,12 +59,51 @@
   .clock .big { font-size: 44px; font-weight: 300; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
   .dayname { font-size: 11px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
   /* the shift under the timer: its hours in Philippines time (California on hover) and how the clock-in went */
-  .shiftline { position: relative; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 3px 8px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+  /* the lines under the timer are pills, not a block of text: each fact is its own rounded chip */
+  .shiftline { position: relative; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin-top: 7px; font-size: 11px; color: var(--muted); }
   .shiftline[data-tip] { cursor: default; }
-  .sstat { padding: 0 8px; border-radius: 999px; font-weight: 600; }
-  .sstat.ok { color: var(--ok); background: rgba(52,211,153,.14); }
+  /* Holiday themes: on a holiday the whole panel changes colour. Only the palette moves; the status colours (green on time,
+     amber late, red over) and the Clock in button keep their meaning. data-holiday is set from the holiday's name (paintHoliday). */
+  html[data-holiday] .panel::before { content: ''; display: block; flex: none; height: 4px; background: var(--strip); }
+  html[data-holiday="newyear"] { --strip: linear-gradient(90deg,#e5534b,#fbbf24,#e5534b); }
+  html[data-holiday="newyear"] { --bg: #120d03; --panel: #1d1507; --raise: #281d0a; --line: rgba(251,191,36,.16); --muted: #b5a47a; --brand: #b07a0c; --brand-hi: #d9990f; --gold: #fbbf24; --accent: #fbbf24; --accent2: #e5534b; }
+  html[data-theme="light"][data-holiday="newyear"] { --bg: #f6efdc; --panel: #fffaf0; --raise: #fbf3dd; --line: rgba(120,80,0,.2); --muted: #7a6532; --brand: #9a6a08; --brand-hi: #7d5406; --gold: #a15a07; --accent: #a15a07; --accent2: #c4372c; }
+  html[data-holiday="holyweek"] { --strip: linear-gradient(90deg,#8575d0,#b8aaf0,#8575d0); }
+  html[data-holiday="holyweek"] { --bg: #0f0c18; --panel: #17132a; --raise: #1f1a38; --line: rgba(200,185,255,.14); --muted: #9a93bb; --brand: #6b5bb5; --brand-hi: #8575d0; --gold: #b8aaf0; --accent: #b8aaf0; --accent2: #8575d0; }
+  html[data-theme="light"][data-holiday="holyweek"] { --bg: #ebe8f5; --panel: #ffffff; --raise: #f4f2fb; --line: rgba(60,40,120,.18); --muted: #675f8a; --brand: #5a4aa6; --brand-hi: #483a8c; --gold: #5a4aa6; --accent: #5a4aa6; --accent2: #7a6bc4; }
+  html[data-holiday="christmas"] { --strip: repeating-linear-gradient(135deg,#e5534b 0 10px,#1f8a4c 10px 20px); }
+  html[data-holiday="christmas"] { --bg: #160709; --panel: #240d12; --raise: #301419; --line: rgba(255,150,140,.16); --muted: #c49a95; --brand: #1f8a4c; --brand-hi: #2fa862; --gold: #ff6b61; --accent: #ff6b61; --accent2: #f5c542; }
+  html[data-theme="light"][data-holiday="christmas"] { --bg: #f7e9e6; --panel: #fff9f7; --raise: #fceeea; --line: rgba(120,30,20,.18); --muted: #7a4d47; --brand: #1b7a44; --brand-hi: #146236; --gold: #c4372c; --accent: #c4372c; --accent2: #a15a07; }
+  html[data-holiday="saints"] { --strip: linear-gradient(90deg,#3b6fd4,#f3d98a,#3b6fd4); }
+  html[data-holiday="saints"] { --bg: #070d1c; --panel: #0d1630; --raise: #13203f; --line: rgba(255,230,160,.14); --muted: #8f9bbf; --brand: #3b6fd4; --brand-hi: #5a8af0; --gold: #f3d98a; --accent: #f3d98a; --accent2: #f3d98a; }
+  html[data-theme="light"][data-holiday="saints"] { --bg: #e8edf8; --panel: #ffffff; --raise: #f1f4fb; --line: rgba(20,40,100,.16); --muted: #55648c; --brand: #2f5fc4; --brand-hi: #234aa0; --gold: #8a6a12; --accent: #8a6a12; --accent2: #8a6a12; }
+  html[data-holiday="national"] { --strip: linear-gradient(90deg,#0038a8 0 33.3%,#fcd116 33.3% 66.6%,#ce1126 66.6%); }
+  html[data-holiday="national"] { --bg: #060f24; --panel: #0b1a3d; --raise: #112451; --line: rgba(255,255,255,.12); --muted: #93a3c9; --brand: #1553c9; --brand-hi: #2e6ce0; --gold: #fcd116; --accent: #fcd116; --accent2: #ff4d5e; }
+  html[data-theme="light"][data-holiday="national"] { --bg: #e7ecf8; --panel: #ffffff; --raise: #f1f4fc; --line: rgba(0,40,120,.16); --muted: #546598; --brand: #0038a8; --brand-hi: #002c86; --gold: #8a6a00; --accent: #8a6a00; --accent2: #ce1126; }
+  html[data-holiday="labour"] { --strip: linear-gradient(90deg,#3f7391,#d8c3a5,#3f7391); }
+  html[data-holiday="labour"] { --bg: #0d1114; --panel: #151b20; --raise: #1d252c; --line: rgba(255,255,255,.1); --muted: #98a5ae; --brand: #3f7391; --brand-hi: #5a93b5; --gold: #d8c3a5; --accent: #d8c3a5; --accent2: #d8c3a5; }
+  html[data-theme="light"][data-holiday="labour"] { --bg: #e9edf0; --panel: #ffffff; --raise: #f2f5f7; --line: rgba(20,40,60,.16); --muted: #5b6a74; --brand: #35657f; --brand-hi: #284f65; --gold: #6b5a3d; --accent: #6b5a3d; --accent2: #6b5a3d; }
+  html[data-holiday="other"] { --strip: linear-gradient(90deg,#e5534b,#fbbf24); }
+  /* a holiday today: a banner in the same place and shape as the birthday one, in the day's colours */
+  .holiday { position: relative; isolation: isolate; overflow: hidden; border-radius: 10px; padding: 9px 12px; text-align: center; font-size: 12px; line-height: 1.35;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent2) 26%, transparent), color-mix(in srgb, var(--accent) 18%, transparent));
+    border: 1px solid color-mix(in srgb, var(--accent2) 55%, transparent); }
+  .holiday > span { position: relative; z-index: 1; }
+  .holiday .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent2); }
+  .holiday .tag svg { flex: none; }
+  .holiday .big { display: block; margin-top: 2px; font-size: 16px; font-weight: 700; color: var(--accent); }
+  .holiday .also { display: block; margin-top: 2px; color: var(--ink); opacity: .85; }
+  .holiday.worked { background: linear-gradient(135deg, rgba(31,167,99,.26), color-mix(in srgb, var(--accent) 18%, transparent)); border-color: rgba(31,167,99,.55); }
+  .holiday.worked .tag { color: var(--ok); }
+  .holiday .fleck { position: absolute; z-index: 0; top: -8px; opacity: .85; animation: fall 3.6s linear infinite; pointer-events: none; }
+  .holiday .fleck.conf { width: 6px; height: 10px; border-radius: 1px; }
+  .holiday .fleck.snow { width: 5px; height: 5px; border-radius: 50%; background: #fff; }
+  @media (prefers-reduced-motion: reduce) { .holiday .fleck { display: none; } }
+  .shiftline > span { padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--raise); white-space: nowrap; }
+  .shiftline > .sstat { font-weight: 600; border-color: transparent; }
+  .sstat.ok { color: var(--ok); background: rgba(52,211,153,.16); }
   .sstat.late { color: #1b1300; background: var(--warn); }
-  .clock .lbl { font-size: 12px; color: var(--muted); letter-spacing: .04em; margin-top: 2px; }
+  .clock .lbl { margin-top: 2px; font-size: 12px; color: var(--muted); letter-spacing: .04em; }
   .actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
   .slide { position: relative; height: 48px; border-radius: 999px; background: var(--raise); border: 1px solid var(--line);
     color: var(--muted); overflow: hidden; user-select: none; touch-action: none; }
@@ -115,6 +156,14 @@
   .notice { border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: 10px; padding: 10px 12px; font-size: 13px; background: var(--raise); }
   .notice b { display: block; margin-bottom: 4px; }
   .notice .btn { margin-top: 8px; width: 100%; }
+  /* Signing in, or waiting for the first data after it: say so, and dim and lock everything else until it is ready. */
+  .signing { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-left: 3px solid var(--brand-hi); border-radius: 10px; padding: 10px 12px; font-size: 13px; background: var(--raise); }
+  .signing[hidden] { display: none; }
+  .signing b { display: block; }
+  .signing small { color: var(--muted); opacity: .8; }
+  .signing .spinner { flex: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--brand-hi); animation: spin .8s linear infinite; }
+  .body.busy > :not(.signing) { opacity: .45; pointer-events: none; transition: opacity .2s; }
+  @media (prefers-reduced-motion: reduce) { .signing .spinner { animation: none; border-top-color: var(--line); } }
   [hidden] { display: none !important; }
   .chips { display: flex; gap: 8px; }
   .chip { flex: 1; font: inherit; cursor: pointer; display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 9px 6px; background: var(--raise); border: 1px solid var(--line); border-radius: 10px; font-size: 12px; color: var(--muted); }
@@ -160,6 +209,9 @@
   .brk.skipped { border-style: dashed; }
   .brk.skipped .bt { color: var(--muted); font-size: 12px; font-weight: 500; }
   .brk.armed { border-color: var(--warn); }
+  /* an emergency: red, and always first (the portal sends it first) */
+  .ann.emergency { border-color: var(--bad); background: rgba(229,83,75,.14); }
+  .ann.emergency small { color: var(--bad); font-weight: 700; }
   .chip:hover, .ann:hover { border-color: var(--brand-hi); background: var(--panel); }
   .chip:focus-visible, .ann:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
   .bday { position: relative; isolation: isolate; overflow: hidden; border-radius: 10px; padding: 8px 30px 8px 12px; text-align: center; font-size: 12px; line-height: 1.35;
@@ -173,7 +225,17 @@
   .bday .confetti { position: absolute; z-index: -1; top: -8px; width: 6px; height: 10px; border-radius: 1px; opacity: .9; animation: fall 3.2s linear infinite; pointer-events: none; }
   @keyframes fall { to { transform: translateY(70px) rotate(360deg); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .bday .confetti { display: none; } }
-  .newshead { font-size: 10px; letter-spacing: .05em; font-weight: 600; text-transform: uppercase; color: var(--gold); opacity: .85; margin-bottom: 8px; }
+  .newshead { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: .05em; font-weight: 600; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+  .newshead > span { opacity: .85; }
+  /* refresh buttons: one beside the counts, a very small one by the announcements heading; the arrow spins while it fetches */
+  .rbtn { display: grid; place-items: center; flex: none; align-self: stretch; width: 34px; color: var(--muted); cursor: pointer; background: var(--raise); border: 1px solid var(--line); border-radius: 10px; }
+  .rbtn:hover { color: var(--ink); border-color: var(--brand-hi); background: var(--panel); }
+  .rbtn:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
+  .rbtn.mini { align-self: auto; width: 18px; height: 18px; border-radius: 6px; border-color: transparent; background: transparent; }
+  .rbtn.spin svg { animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .rbtn.spin svg { animation: none; } }
+  .none { margin: 0; font-size: 12px; color: var(--muted); }
   .body > :not(#newsWrap) { flex: none; }
   #newsWrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .news { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding: 0 6px 2px 0; }
@@ -271,10 +333,12 @@
 
     <div class="body">
       <div class="notice" id="notice" hidden></div>
+      <div class="signing" id="signing" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><div><b id="signingTitle">Signing in...</b><small id="signingText">Connecting this PC to the portal.</small></div></div>
       <div class="bday" id="bday" hidden></div>
+      <div class="holiday" id="holidayline" role="status" hidden></div>
       <div class="clock">
         <div class="dayname" id="dayName"></div>
-        <div class="big" id="today">0:00:00</div>
+        <div class="big" id="today" data-tip-pos="below">0:00:00</div>
         <div class="lbl" id="lbl">worked today</div>
         <div class="shiftline" id="shiftline" hidden></div>
       </div>
@@ -296,23 +360,24 @@
       <div class="chips">
         <button class="chip" id="notifCard" type="button" data-tip="Open notifications in the portal" data-tip-align="start"><b id="notif">3</b>notifications</button>
         <button class="chip" id="todoCard" type="button" data-tip="Open your to-dos in the portal" data-tip-align="end"><b id="todo">2</b>to-dos due</button>
+        <button class="rbtn" id="refreshCounts" type="button" data-tip="Refresh everything" data-tip-align="end" aria-label="Refresh everything"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.5h-4.5"/></svg></button>
       </div>
       <nav class="quick" id="quick" aria-label="Quick links">
-        <button type="button" class="ql" data-page="attendance" data-tip="Attendance" data-tip-align="start" aria-label="Attendance"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+        <button type="button" class="ql" data-page="my-time" data-tip="My Time" data-tip-align="start" aria-label="My Time"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
         <button type="button" class="ql" data-page="leave" data-tip="Leave requests" aria-label="Leave requests"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M9 15l2 2 4-4"/></svg></button>
         <button type="button" class="ql" data-page="calendar" data-tip="Calendar" aria-label="Calendar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
         <button type="button" class="ql" data-page="hr-requests" data-tip="HR requests" aria-label="HR requests"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l1 2h3v14H5V6h3z"/><path d="M9 12h6M9 16h4"/></svg></button>
         <button type="button" class="ql" data-page="documents" data-tip="Documents" aria-label="Documents"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg></button>
         <button type="button" class="ql" data-page="freedom-wall" data-tip="Freedom Wall" data-tip-align="end" aria-label="Freedom Wall"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v12h-7l-4 4v-4H5z"/></svg></button>
       </nav>
-      <div id="newsWrap" hidden><div class="newshead">Announcements</div><div class="news" id="news"></div></div>
+      <div id="newsWrap" hidden><div class="newshead"><span>Announcements</span></div><div class="news" id="news"></div></div>
     </div>
 
     <div class="drawer" id="drawer">
       <h3>What this app records about you</h3>
       <ul>
         <li>When you clock in and out</li>
-        <li>5-minute blocks marked <i>active</i> or <i>idle</i></li>
+        <li>When you start and end your breaks and lunch</li>
       </ul>
       <h3 class="no">What it never records</h3>
       <ul class="no">
@@ -421,11 +486,13 @@
     const items = (f && f.announcements) || [];
     const news = $('news');
     news.replaceChildren();
-    $('newsWrap').hidden = items.length === 0;
+    $('newsWrap').hidden = false;
+    if (items.length === 0) { const none = document.createElement('p'); none.className = 'none'; none.textContent = 'Nothing highlighted for you right now.'; news.appendChild(none); }
     for (const a of items) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'ann'; b.dataset.tip = 'Open in the portal'; b.dataset.tipPos = 'inside';
-      const cat = document.createElement('small'); cat.textContent = (a.featured ? '★ Highlighted · ' : '') + a.category;
+      const cat = document.createElement('small'); cat.textContent = (a.emergency ? '⚠ Emergency · ' : a.featured ? '★ Highlighted · ' : '') + a.category;
       if (a.featured) b.classList.add('hot');
+      if (a.emergency) b.classList.add('emergency');
       const title = document.createElement('b'); title.textContent = a.title;
       const prev = document.createElement('span'); prev.textContent = a.preview;
       b.append(cat, title, prev);
@@ -436,7 +503,28 @@
     }
   }
 
+  // Busy: signing in (the portal is being asked) or signed in but today's record has not arrived yet.
+  let firstData = false, busyTimer = null;
+  function setBusy(mode) {
+    const on = mode !== null;
+    $('signing').hidden = !on;
+    document.querySelector('.body').classList.toggle('busy', on);
+    if (mode === 'signin') { $('signingTitle').textContent = 'Signing in...'; $('signingText').textContent = 'Connecting this PC to the portal.'; }
+    if (mode === 'load') { $('signingTitle').textContent = 'Loading your time...'; $('signingText').textContent = 'Getting your record from the portal.'; }
+  }
+  function updateBusy(a) {
+    clearTimeout(busyTimer);
+    if (a.status === 'checking') return setBusy('signin');
+    if (a.status === 'signedIn' && !firstData) {
+      setBusy('load');
+      busyTimer = setTimeout(() => setBusy(null), 10000);   // offline or slow: never leave the panel locked
+      return;
+    }
+    setBusy(null);
+  }
+
   function applyAuth(a) {
+    if (a.status !== 'signedIn') firstData = false;
     const notice = $('notice');
     auth.signedIn = a.status === 'signedIn';
     $('whoami').disabled = !auth.signedIn;   // nothing to open until someone is signed in
@@ -460,6 +548,13 @@
       $('noticePortal').onclick = () => window.bpoTime ? window.bpoTime.openPortal() : toast('This would open the portal.');
     }
     $('soWrap').hidden = !auth.signedIn || !window.bpoTime;
+    if (window.bpoTime) updateBusy(a);
+    // Signed out (or still checking): show nothing of anyone's. The app clears its data too; this is the second guard.
+    if (a.status !== 'signedIn' && window.bpoTime) {
+      $('notif').textContent = '-'; $('todo').textContent = '-';
+      paintFeed(null); $('newsWrap').hidden = true; $('bday').hidden = true;
+      s.att = null; syncFromAttendance();
+    }
     render();
   }
 
@@ -472,6 +567,7 @@
     $('today').textContent = hms(s.workedMs);
     paintBreaks();
     paintShift();
+    paintHoliday();
     // Clock in is a button. Clock out is a slider, so it cannot be pressed by accident.
     const done = !!(s.att && s.att.checkedOut);
     $('clock').hidden = s.state === 'in';
@@ -489,6 +585,7 @@
   const live = !!window.bpoTime;
   let resetSlide = () => {};
   function applyAttendance(a) {
+    if (a) { firstData = true; clearTimeout(busyTimer); if (auth.signedIn) setBusy(null); }
     if (a && a.error) {
       // Signed in, but the portal has no time tracking for this PC yet: say so, never fake numbers.
       s.att = null;
@@ -525,34 +622,118 @@
   const phClock = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' });
   const caClock = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' });
   const spanOf = ms => { const m = Math.max(0, Math.round(ms / 60000)); const h = Math.floor(m / 60); return h ? h + 'h ' + (m % 60) + 'm' : m + 'm'; };
+  // A holiday today: say which, and what clocking in means. Nothing shows on an ordinary day.
+  let lastHolidaySig = '';
+  // Demo page only: pretend today is Dec 25 and a holiday, to see how the panel looks.
+  // Which look a holiday gets, from its name. Anything unrecognised (a local holiday HR typed in) gets the plain red and gold.
+  function holidayTheme(name) {
+    const n = (name || '').toLowerCase();
+    if (/maundy|good friday|holy saturday|black saturday|holy (week|thursday|wednesday)/.test(n)) return 'holyweek';
+    if (/christmas/.test(n)) return 'christmas';
+    if (/new year|year.?s eve|last day of the year|chinese/.test(n)) return 'newyear';
+    if (/all saints|all souls|immaculate|undas/.test(n)) return 'saints';
+    if (/labou?r/.test(n)) return 'labour';
+    if (/independence|valor|heroes|bonifacio|rizal|aquino|edsa|national|republic/.test(n)) return 'national';
+    return 'other';
+  }
+  const ICON = p => '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
+  const HOLIDAY_ICONS = {
+    calendar: ICON('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'),
+    newyear: ICON('<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z"/>'),
+    christmas: ICON('<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z"/>'),
+    national: ICON('<path d="M5 21V4M5 4h13l-3 4 3 4H5"/>'),
+    saints: ICON('<path d="M12 2c2 3 3 4.5 3 6.5a3 3 0 0 1-6 0C9 6.5 10 5 12 2z"/><rect x="9" y="12" width="6" height="9" rx="1"/>'),
+    holyweek: ICON('<path d="M12 4v16M7 9h10"/>'),
+    labour: ICON('<path d="M14 7l3-3 3 3-3 3M3 21l10-10M11 9l4 4"/>'),
+  };
+  // A short, warm greeting for the day. Says nothing about pay or how the day is recorded: HR can change that.
+  function holidayGreeting(name, theme) {
+    const n = (name || '').toLowerCase();
+    if (/rizal|aquino/.test(n)) return 'Remembering a hero of our country.';
+    if (/chinese/.test(n)) return 'Gung hei fat choy!';
+    if (/last day of the year|year.?s eve/.test(n)) return 'Wishing you a great end to the year.';
+    switch (theme) {
+      case 'newyear': return 'Happy New Year!';
+      case 'holyweek': return 'Wishing you a peaceful, reflective day.';
+      case 'christmas': return 'Merry Christmas! Wishing you a joyful day.';
+      case 'saints': return 'Wishing you a quiet, peaceful day.';
+      case 'national': return 'Mabuhay! Happy ' + name + '.';
+      case 'labour': return 'Thank you for all your hard work.';
+      default: return 'Enjoy the holiday!';
+    }
+  }
+  function paintHoliday() {
+    const el = $('holidayline'), a = s.att;
+    const worked = live ? !!(a && a.checkedIn) : s.state === 'in';
+    const h = live && a && a.holiday ? a.holiday.name : null;
+    const sig = h ? h + '|' + (worked ? '1' : '0') : '';
+    // (a change of colour scheme re-reads the theme: the attribute is on <html>, the CSS does the rest)
+    if (sig === lastHolidaySig) return;
+    lastHolidaySig = sig;
+    el.hidden = !h;
+    if (!h) { delete document.documentElement.dataset.holiday; return; }
+    const theme = holidayTheme(h);
+    document.documentElement.dataset.holiday = theme;
+    el.classList.toggle('worked', worked);
+    const tag = document.createElement('span'); tag.className = 'tag';
+    tag.innerHTML = HOLIDAY_ICONS[theme] || HOLIDAY_ICONS.calendar;
+    tag.append('Holiday today');
+    const big = document.createElement('span'); big.className = 'big'; big.textContent = h;
+    const also = document.createElement('span'); also.className = 'also';
+    also.textContent = holidayGreeting(h, theme) + (worked ? ' Thank you for working today.' : '');
+    el.replaceChildren(tag, big, also);
+    // Confetti for New Year, snow for Christmas. Nothing for the solemn days.
+    if (theme === 'newyear' || theme === 'christmas') {
+      const colors = theme === 'newyear' ? ['#fbbf24', '#e5534b', '#34d399', '#a78bfa', '#ffffff'] : [];
+      for (let i = 0; i < 12; i++) {
+        const f = document.createElement('i'); f.className = 'fleck ' + (theme === 'newyear' ? 'conf' : 'snow');
+        if (colors.length) f.style.background = colors[i % colors.length];
+        f.style.left = (4 + i * 8) + '%'; f.style.animationDelay = (i * 0.27).toFixed(2) + 's';
+        el.appendChild(f);
+      }
+    }
+  }
+  let lastShiftSig = '';
   function paintShift() {
     const el = $('shiftline'), a = s.att, sh = a && a.shift;
-    if (!live || !sh) { el.hidden = true; return; }
+    if (!live || !sh) { el.hidden = true; lastShiftSig = ''; return; }
     el.hidden = false;
     const start = new Date(sh.startAt), end = new Date(sh.endAt);
     const now = new Date(a.serverNow).getTime() + (Date.now() - a.receivedAt);
     const parts = [];
-    const text = t => { const x = document.createElement('span'); x.textContent = t; return x; };
-    const pill = (t, cls) => { const x = text(t); x.className = 'sstat ' + cls; return x; };
+    // Every pill has its own tooltip (shown below it), in both time zones, instead of one tip for the whole row.
+    const text = (t, tip) => { const x = document.createElement('span'); x.textContent = t; if (tip) { x.dataset.tip = tip; x.dataset.tipPos = 'below'; } return x; };
+    const pill = (t, cls, tip) => { const x = text(t, tip); x.className = 'sstat ' + cls; return x; };
+    const both = d => phClock.format(d) + ' PH \u00b7 ' + caClock.format(d) + ' CA';
+    el.removeAttribute('data-tip'); el.removeAttribute('data-tip-pos');
     if (!sh.workDay) {
       parts.push(text('Day off'));
-      el.removeAttribute('data-tip');
     } else {
-      parts.push(text('Shift ' + phClock.format(start) + ' – ' + phClock.format(end) + ' PH'));
-      el.dataset.tip = caClock.format(start) + ' – ' + caClock.format(end) + ' CA';
-      el.dataset.tipPos = 'below';
+      // The hours are in Philippines time (the clocks above say so); California time shows on hover.
+      const hours = text(phClock.format(start) + ' \u2013 ' + phClock.format(end), 'Shift: ' + caClock.format(start) + ' \u2013 ' + caClock.format(end) + ' CA');
       const graceEnd = start.getTime() + (sh.graceMinutes || 0) * 60000;
       if (a.checkedIn) {
-        parts.push(sh.lateMinutes > 0 ? pill('Late by ' + sh.lateMinutes + ' min', 'late') : pill('On time', 'ok'));
-        if (!a.checkedOut) parts.push(text(now < end.getTime() ? 'ends in ' + spanOf(end.getTime() - now) : 'shift ended'));
+        // order of importance: how the clock-in went, the shift, then what is left of it
+        const inTip = a.checkInAt ? 'Clocked in at ' + both(new Date(a.checkInAt)) : '';
+        parts.push(sh.lateMinutes > 0 ? pill('Late by ' + sh.lateMinutes + ' min', 'late', inTip) : pill('On time', 'ok', inTip), hours);
+        if (!a.checkedOut) parts.push(text(now < end.getTime() ? spanOf(end.getTime() - now) + ' left' : 'shift ended', 'Shift ends at ' + both(end)));
       } else if (now < start.getTime()) {
-        parts.push(text('starts in ' + spanOf(start.getTime() - now)));
+        parts.push(text('starts in ' + spanOf(start.getTime() - now), 'Shift starts at ' + both(start)), hours);
       } else if (now <= graceEnd) {
-        parts.push(text('clock in by ' + phClock.format(new Date(graceEnd)) + ' to be on time'));
+        parts.push(text('clock in by ' + phClock.format(new Date(graceEnd)), 'Grace ends at ' + both(new Date(graceEnd))), hours);
       } else if (now < end.getTime()) {
-        parts.push(pill('started ' + spanOf(now - start.getTime()) + ' ago', 'late'));
+        parts.push(pill('started ' + spanOf(now - start.getTime()) + ' ago', 'late', 'Shift started at ' + both(start)), hours);
+      } else {
+        parts.push(hours);
       }
     }
+    // The first tip hangs from its pill's left edge and the last from its right edge, so none leaves the panel.
+    if (parts.length > 1) { parts[0].dataset.tipAlign = 'start'; parts[parts.length - 1].dataset.tipAlign = 'end'; }
+    // render() runs every 250 ms. Rebuilding the pills each time destroyed the one under the mouse, so its tooltip
+    // never stayed. Only rebuild when something shown actually changed.
+    const sig = parts.map(p => p.className + '|' + p.textContent + '|' + (p.dataset.tip || '') + '|' + (p.dataset.tipAlign || '')).join('||');
+    if (sig === lastShiftSig && el.childElementCount) return;
+    lastShiftSig = sig;
     el.replaceChildren(...parts);
   }
 
@@ -633,7 +814,8 @@
     const fmt = iso => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' }) + ' PH';
     const t = fmt(a.checkInAt);
     // one short line under the timer: when the shift began, or the span once it is over
-    $('lbl').textContent = a.checkedOut ? 'worked today \u00b7 ' + t + ' to ' + fmt(a.checkOutAt) : 'worked today \u00b7 since ' + t;
+    $('lbl').textContent = a.checkedOut ? 'worked today \u00b7 ' + t + ' to ' + fmt(a.checkOutAt) : 'worked today';
+    $('today').dataset.tip = 'Clocked in ' + t;
   }
 
   function tick() {
@@ -753,6 +935,18 @@
     applyTheme(next);
     closeMenu();
   };
+  // Refresh buttons. The arrow spins while the portal is asked, and for a moment after so a quick answer is still visible.
+  function wireRefresh(btn, call, demoText) {
+    btn.onclick = () => {
+      if (!window.bpoTime) return toast(demoText);
+      if (btn.classList.contains('spin')) return;
+      btn.classList.add('spin');
+      Promise.resolve(call()).catch(() => {}).finally(() => setTimeout(() => btn.classList.remove('spin'), 500));
+    };
+  }
+  // One button reloads everything the panel shows: the counts, the announcements and today's record.
+  wireRefresh($('refreshCounts'), () => Promise.all([window.bpoTime.refreshCounts(), window.bpoTime.refreshFeed(), window.bpoTime.refreshAttendance()]), 'This would refresh the counts, the announcements and today\x27s record.');
+
   // Quick links: the pages people reach for most. The app only opens pages from a fixed list (see main.ts).
   for (const b of document.querySelectorAll('.ql')) {
     b.onclick = () => window.bpoTime ? window.bpoTime.openPortal(b.dataset.page) : toast('This would open ' + b.title + ' in the portal.');

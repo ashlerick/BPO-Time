@@ -11,7 +11,7 @@ import * as updates from "./updates";
 const PORTAL_URL = "https://ashlerick.github.io/BPO-Portal/";
 const WIDTH = 300; // DIPs
 // Pages the panel may open in the portal (quick links, cards). Anything else opens the portal home.
-const PORTAL_PAGES = ["notifications", "announcements", "attendance", "leave", "calendar", "hr-requests", "documents", "freedom-wall", "profile"];
+const PORTAL_PAGES = ["notifications", "announcements", "my-time", "leave", "calendar", "hr-requests", "documents", "freedom-wall", "profile"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 let win: BrowserWindow | null = null;
@@ -301,6 +301,10 @@ app.whenReady().then(() => {
   ipcMain.handle("feed:get", () => feed.get());
   counts.onChange((c) => win?.webContents.send("counts:state", c));
   ipcMain.handle("counts:get", () => counts.get());
+  // The refresh buttons in the panel: fetch now instead of waiting for the next automatic check.
+  ipcMain.handle("counts:refresh", () => counts.refresh());
+  ipcMain.handle("feed:refresh", () => feed.refresh());
+  ipcMain.handle("attendance:refresh", () => attendance.refresh());
   attendance.onChange((a) => win?.webContents.send("attendance:state", a));
   ipcMain.handle("attendance:get", () => attendance.get());
   // Clocking in copies "Good morning, clock in!" and clocking out copies "Good night, clock out!" (same on/off switch as

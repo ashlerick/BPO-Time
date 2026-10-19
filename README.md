@@ -3,7 +3,7 @@
 A small Windows sidebar app for the [BPO Portal](https://github.com/ashlerick/BPO-Portal): it tracks
 work time and syncs with the portal, so the PC and the portal's Attendance page always agree.
 
-**Status: version 0.1.1 (beta).** Windows only. Installer and update steps: [docs/release.md](./docs/release.md).
+**Status: version 0.1.2 (beta).** Windows only. Installer and update steps: [docs/release.md](./docs/release.md).
 
 - Why this exists and what was decided: [docs/context.md](./docs/context.md)
 - The design: [docs/plan.md](./docs/plan.md)
