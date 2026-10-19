@@ -3,8 +3,9 @@
 > This is the app's own repository. The portal it talks to lives at
 > https://github.com/ashlerick/BPO-Portal.
 
-Status: **plan only, nothing built.** Written 2026-10-16 from an investigation in the portal repo, where
-this document was first kept. It sits alongside the portal's own plans
+Status: **built and shipping (version 0.1.1, Windows).** Written 2026-10-16 from an investigation in the portal
+repo, where this document was first kept; updated 2026-10-19 with the decisions below. Parts of the design
+sections are the original plan: section 9 and 10 are the current truth, and **there is no idle detection**. It sits alongside the portal's own plans
 ([bpo_plan.md](https://github.com/ashlerick/BPO-Portal/blob/main/bpo_plan.md) and
 [new_plan.md](https://github.com/ashlerick/BPO-Portal/blob/main/new_plan.md)).
 
@@ -24,7 +25,7 @@ hour from an hour away from the desk, and has no breaks.
 
 ## 3. What the panel shows
 
-- Name and status: Clocked in / On break / Idle.
+- Name and status: Clocked in / On break.
 - Time worked today (large), and this week's total.
 - Buttons: Clock in, and a slide to clock out (so it cannot be pressed by accident). No break or lunch buttons.
 - Today's shift and whether the person is on time (from the existing shift schedules).
@@ -51,7 +52,7 @@ Buy (D) instead if the goal is full monitoring with reports.
 
 - **Electron** (TypeScript, same stack as the portal; can reuse components and the API client).
   Alternative: Tauri (about 10 MB against about 100 MB, but Rust and more setup).
-- Idle time comes from the operating system (`powerMonitor.getSystemIdleTime`), not from the browser.
+- No idle detection: the app does not measure keyboard or mouse activity (decided 2026-10-19).
 - Lives in **its own repository** (working name `BPO-Time`), not in this one. The portal repo keeps only
   what the app talks to: the backend endpoints, the "Allow this PC?" page and the download button.
 - The two repos are tied together only by the API (section 5.5). Changing an endpoint here means
@@ -90,8 +91,7 @@ Rules:
 
 ### 5.4 Sync
 
-- The app uploads small blocks (for example 09:00 to 09:05, active or idle) to the portal API.
-- Blocks are queued on the PC while offline and uploaded when the connection returns.
+- Clock in and clock out go to the portal API (`/hr/device-clock-in`, `/hr/device-clock-out`).
 - The **server's clock** is the reference, so changing the PC clock cannot inflate hours.
 - The app pulls today's and this week's totals from the same data, so the PC and the Attendance page
   agree.
@@ -150,8 +150,8 @@ Rules:
 
 - Covered by the Philippines Data Privacy Act (RA 10173): written policy, notice to employees,
   proportionate purpose. HR or legal must approve. This document is not legal advice.
-- Track **time and idle only**. No screenshots, keystroke logging or window titles unless there is a
-  strong, documented reason.
+- Track **clock-in and clock-out time only**. No idle tracking, screenshots, keystroke logging or window
+  titles unless there is a strong, documented reason.
 - The app shows the person exactly what is recorded and lets them see their own data.
 - The portal already records the check-in IP; employees should be told (see the note in the README).
 
@@ -159,30 +159,35 @@ Rules:
 
 1. **Week 1:** app shell, "Login with portal", clock in or out, today's total on screen and in the
    portal.
-2. **Week 2:** idle detection, breaks and lunch, offline queue.
+2. **Week 2:** breaks and lunch, offline queue. (Idle detection was dropped.)
 3. **Week 3:** docking, tray, auto-start, installer, signing, auto-update.
 
 These are estimates from similar projects, not from a prototype.
 
 ## 8. Risks
 
-- Mouse-jiggler tools can defeat idle detection. This is a policy question more than a technical one.
 - PCs on VPN or shared IPs make the IP check unreliable (already true today).
 - Locked-down PCs may not allow installation or may block the browser handoff (hence the code
   fallback).
 - Mixed operating systems: the first version is Windows only.
 - Employee trust: roll out with the policy and the visible "what is recorded" screen, not silently.
 
-## 9. Open questions (undecided)
+## 9. Questions and answers (decided 2026-10-19)
 
-1. What is it for: payroll accuracy, manager visibility or accountability?
-2. Windows only, or Macs too?
-3. How many people, and remote, office or both?
-4. Dock (reserve space) or float on top?
-5. Is a PC lock (shop-style session control) out of scope? Assumed out of scope here.
-6. Does anything beyond time belong on the panel (announcements, to-dos, links)?
-7. Has HR agreed to monitoring, and is the policy updated?
+1. [x] **What is it for?** Time management and easy access to the portal.
+2. [x] **Windows only, or Macs too?** Windows only.
+3. [x] **How many people, and where?** Around 20 or more.
+4. [x] **Dock (reserve space) or float on top?** Done: a bottom-most desktop widget, so icons stay put and
+   apps can sit on top (commit 161c32a).
+5. [x] **Is a PC lock (shop-style session control) in scope?** No. The app never locks or blocks the PC.
+6. [x] **Does anything beyond time belong on the panel?** Yes, and built: announcements, birthdays, quick
+   links, shift status, "Got it" acknowledgements.
+7. [x] **Has HR agreed to monitoring, and is the policy updated?** Yes.
+8. [x] **Idle detection?** No. It was never built and is dropped from the plan.
 
 ## 10. Decision
 
-Nothing is committed yet. First step if approved: a clickable mockup of the panel, then milestone 1.
+- [x] Build the Windows panel (Electron). Shipped as version 0.1.1 with installer and auto-update.
+- [x] Time only: clock in and clock out, no idle, no screenshots, no keystrokes, no window titles.
+- [x] No PC lock.
+- [x] HR has agreed, and the policy is updated.
