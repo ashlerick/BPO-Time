@@ -26,3 +26,6 @@ build/
 Thumbs.db
 *.log
 dist/
+
+# design samples and demos, kept locally (not part of the app)
+.samples/
