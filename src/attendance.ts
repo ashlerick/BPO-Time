@@ -13,6 +13,10 @@ export interface Attendance {
   serverNow: string;
   /** Breaks and lunch so far today (rules: README, "Breaks and lunch"). */
   breaks: BreakEntry[];
+  /** Today's holiday (by name), or null on an ordinary day. Set on the portal by HR; national holidays are prefilled. */
+  holiday: { name: string } | null;
+  /** True when today's attendance counts as a working holiday (clocked in on a holiday). */
+  workingHoliday: boolean;
   /** Seconds allowed per slot, from the portal. */
   breakAllowances: Record<BreakSlot, number>;
   /** Today's shift, or null when none is assigned. The portal works out lateness with the same function as HR's report. */
