@@ -151,7 +151,7 @@ function raise(): void {
 // "Show desktop" (Win+D or the corner button) lifts the desktop above every window, which would cover the
 // panel. Put the panel back above it while that lasts, then back to the bottom when the apps return.
 function keepAboveShownDesktop(): void {
-  if (!win || !shown) return;
+  if (!win || win.isDestroyed() || !shown) return;
   const s = desktopState(hwnd);
   if (s.desktopOnTop && s.panelBelowDesktop) {
     // A plain raise cannot beat the desktop while it is lifted; always-on-top can.
@@ -169,7 +169,7 @@ function keepAboveShownDesktop(): void {
 // the panel hides the button. Unsure (the check threw)? Show it: a button that does nothing beats a missing one.
 let canMinimize = true;
 function updateMinimizeAvailable(): void {
-  if (!win) return;
+  if (!win || win.isDestroyed()) return;
   let next = true;
   try {
     next = openAppWindows(hwnd) > 0;
