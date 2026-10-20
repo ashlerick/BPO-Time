@@ -208,6 +208,11 @@ function createWindow(): void {
       nodeIntegration: false,
     },
   });
+  // Once the window is gone (quitting), forget it: the timers below and every `win?.` check then stop, instead of touching a
+  // destroyed window ("Object has been destroyed").
+  win.on("closed", () => {
+    win = null;
+  });
   hwnd = Number(win.getNativeWindowHandle().readBigUInt64LE(0));
   place();
   win.once("ready-to-show", () => sendToBottom(hwnd));
