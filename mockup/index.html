@@ -269,6 +269,28 @@
   .menu .item { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 0;
     border-radius: 8px; padding: 9px 10px; cursor: pointer; }
   .menu .item:hover { background: var(--panel); }
+  .sgroup { padding: 12px 4px 5px; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  /* each group is a card; the settings inside are separated by lines, with the name bright and its explanation quieter */
+  .sbox { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .sbox .srow { border-radius: 0; padding: 10px 12px; }
+  .sbox .srow + .srow { border-top: 1px solid var(--line); }
+  .sbox .srow b { font-size: 13.5px; color: var(--ink); }
+  .sbox .srow small { margin-top: 3px; font-size: 11.5px; color: var(--muted); opacity: .9; }
+  .menu.settings { padding: 8px; }
+  .menu.settings { max-height: calc(100vh - 110px); overflow-y: auto; }
+  .menu .item .chev { float: right; color: var(--muted); }
+  .menu .back { font-weight: 600; border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; margin-bottom: 4px; }
+  .menu.settings { width: min(276px, calc(100vw - 24px)); }
+  .srow { display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left; font: inherit; color: var(--ink); background: transparent; border: 0; border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+  .srow:hover { background: var(--panel); }
+  .srow:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
+  .srow .stext { flex: 1; min-width: 0; }
+  .srow b { display: block; font-size: 13px; font-weight: 600; }
+  .srow small { display: block; margin-top: 2px; font-size: 11.5px; line-height: 1.35; color: var(--muted); }
+  .srow .sw { flex: none; margin-top: 2px; width: 34px; height: 20px; border-radius: 999px; background: var(--line); position: relative; transition: background .15s; }
+  .srow .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .srow[aria-checked="true"] .sw { background: var(--brand-hi); }
+  .srow[aria-checked="true"] .sw::after { transform: translateX(14px); }
   .menu .ver { padding: 6px 10px 2px; font-size: 11px; color: var(--muted); }
   #updateBtn { color: var(--ok); font-weight: 600; }
   .menu .danger-item { color: var(--danger-text); }
@@ -394,13 +416,36 @@
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
       </button>
       <div class="menu" id="menu" role="menu" hidden>
-        <button class="item" id="priv" type="button" role="menuitem">What's recorded</button>
-        <button class="item" id="portal" type="button" role="menuitem">Open portal</button>
-        <button class="item" id="themeBtn" type="button" role="menuitem">Switch to light mode</button>
-        <button class="item" id="copyBtn" type="button" role="menuitemcheckbox" aria-checked="true">Copy chat messages: On</button>
-        <button class="item" id="updateBtn" type="button" role="menuitem" hidden>Restart to update</button>
-        <span id="soWrap" hidden><button class="item danger-item" id="signout" type="button" role="menuitem">Sign out of this PC</button></span>
-        <div class="ver" id="ver" hidden></div>
+        <div id="menuMain">
+          <button class="item" id="priv" type="button" role="menuitem">What's recorded</button>
+          <button class="item" id="portal" type="button" role="menuitem">Open portal</button>
+          <button class="item" id="settingsBtn" type="button" role="menuitem" aria-haspopup="true">Settings <span class="chev" aria-hidden="true">&#9656;</span></button>
+          <button class="item" id="updateBtn" type="button" role="menuitem" hidden>Restart to update</button>
+          <span id="soWrap" hidden><button class="item danger-item" id="signout" type="button" role="menuitem">Sign out of this PC</button></span>
+          <div class="ver" id="ver" hidden></div>
+        </div>
+        <div id="menuSettings" hidden>
+          <button class="item back" id="settingsBack" type="button">&#8592; Settings</button>
+          <div class="sgroup">Appearance</div>
+          <div class="sbox">
+            <button class="srow" id="themeBtn" type="button" role="switch" aria-checked="false"><span class="stext"><b>Light mode</b><small>Use light colours instead of dark.</small></span><span class="sw" aria-hidden="true"></span></button>
+          </div>
+          <div class="sgroup">Chat</div>
+          <div class="sbox">
+            <button class="srow" id="copyBtn" type="button" role="switch" aria-checked="true"><span class="stext"><b>Copy chat messages</b><small>Copies a short line to paste in chat when you clock in or out, or start or end a break.</small></span><span class="sw" aria-hidden="true"></span></button>
+          </div>
+          <div class="sgroup">Breaks</div>
+          <div class="sbox">
+            <button class="srow" id="frontBtn" type="button" role="switch" aria-checked="true"><span class="stext"><b>Keep the panel in front during breaks</b><small>When a break starts, the panel comes to the front and stays there until you press Minimize.</small></span><span class="sw" aria-hidden="true"></span></button>
+            <button class="srow" id="fitBtn" type="button" role="switch" aria-checked="false"><span class="stext"><b>Fit windows beside the panel</b><small>When a break starts, a maximized window shrinks to sit next to the panel, and goes back when the break ends.</small></span><span class="sw" aria-hidden="true"></span></button>
+          </div>
+          <div id="startGroup">
+            <div class="sgroup">Windows</div>
+            <div class="sbox">
+                <button class="srow" id="startBtn" type="button" role="switch" aria-checked="false"><span class="stext"><b>Start with Windows</b><small>Opens BPO Time when you sign in to Windows, so it is ready for you to clock in.</small></span><span class="sw" aria-hidden="true"></span></button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </aside>
@@ -946,13 +991,12 @@
   function applyTheme(t) {
     document.documentElement.dataset.theme = t;
     try { localStorage.setItem('bpotime:theme', t); } catch (e) { /* storage blocked: just not remembered */ }
-    $('themeBtn').textContent = t === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+    $('themeBtn').setAttribute('aria-checked', String(t === 'light'));
   }
   try { applyTheme(localStorage.getItem('bpotime:theme') === 'light' ? 'light' : 'dark'); } catch (e) { applyTheme('dark'); }
   $('themeBtn').onclick = () => {
     const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
     applyTheme(next);
-    closeMenu();
   };
   // Refresh buttons. The arrow spins while the portal is asked, and for a moment after so a quick answer is still visible.
   function wireRefresh(btn, call, demoText) {
@@ -974,14 +1018,38 @@
   // "Taking my lunch", and ending it "Back from break" / "Back from lunch", all for pasting into a chat. On by default; it replaces whatever was on the clipboard, so it can be switched off here.
   let copyOn = true;
   try { copyOn = localStorage.getItem('bpotime:copybreak') !== '0'; } catch (e) { /* storage blocked: stays on */ }
-  const paintCopy = () => { $('copyBtn').textContent = 'Copy chat messages: ' + (copyOn ? 'On' : 'Off'); $('copyBtn').setAttribute('aria-checked', String(copyOn)); };
+  const paintCopy = () => { $('copyBtn').setAttribute('aria-checked', String(copyOn)); };
   paintCopy();
   $('copyBtn').onclick = () => {
     copyOn = !copyOn; paintCopy();
     try { localStorage.setItem('bpotime:copybreak', copyOn ? '1' : '0'); } catch (e) { /* not remembered */ }
   };
   // Footer: one "More" button holds What's recorded, Open portal and Sign out, so none is one slip away.
-  const closeMenu = () => { $('menu').hidden = true; $('more').setAttribute('aria-expanded', 'false'); disarmSignOut(); };
+  // Settings opens inside the More menu, in place of its list (the panel is only 300 pixels wide, so there is no room beside it).
+  const showSettings = on => { $('menuMain').hidden = on; $('menuSettings').hidden = !on; $('menu').classList.toggle('settings', on); };
+  const closeMenu = () => { $('menu').hidden = true; $('more').setAttribute('aria-expanded', 'false'); showSettings(false); disarmSignOut(); };
+  $('settingsBtn').onclick = () => showSettings(true);
+  $('settingsBack').onclick = () => showSettings(false);
+  // Keep the panel in front during breaks: on unless switched off. Remembered on this PC and told to the app.
+  let frontOn = true;
+  try { frontOn = localStorage.getItem('bpotime:keepfront') !== '0'; } catch (e) { /* storage blocked: stays on */ }
+  const paintFront = () => { $('frontBtn').setAttribute('aria-checked', String(frontOn)); if (window.bpoTime) window.bpoTime.setKeepFront(frontOn); };
+  paintFront();
+  $('frontBtn').onclick = () => {
+    frontOn = !frontOn; paintFront();
+    try { localStorage.setItem('bpotime:keepfront', frontOn ? '1' : '0'); } catch (e) { /* not remembered */ }
+    toast(frontOn ? 'The panel will come to the front when a break starts.' : 'The panel will stay where it is when a break starts.');
+  };
+  // Fit windows beside the panel during breaks. Off until someone turns it on; remembered on this PC and told to the app.
+  let fitOn = false;
+  try { fitOn = localStorage.getItem('bpotime:fitwindows') === '1'; } catch (e) { /* storage blocked: stays off */ }
+  const paintFit = () => { $('fitBtn').setAttribute('aria-checked', String(fitOn)); if (window.bpoTime) window.bpoTime.setFitWindows(fitOn); };
+  paintFit();
+  $('fitBtn').onclick = () => {
+    fitOn = !fitOn; paintFit();
+    try { localStorage.setItem('bpotime:fitwindows', fitOn ? '1' : '0'); } catch (e) { /* not remembered */ }
+    toast(fitOn ? 'Maximized windows will fit beside the panel when a break starts.' : 'Windows are left alone during breaks.');
+  };
   $('more').onclick = () => {
     const open = $('menu').hidden;
     $('menu').hidden = !open; $('more').setAttribute('aria-expanded', String(open));
@@ -1047,6 +1115,15 @@
         $('ver').hidden = false; $('ver').textContent = 'BPO Time ' + i.version + (i.testServer ? ' \u00b7 test server ' + i.testServer : '');
         if (i.testServer) { $('testpill').hidden = false; $('testpill').title = 'Talking to a test server: ' + i.testServer + '. Nothing here is on the real portal.'; }
         showUpdate(i.updateReady);
+      });
+      // Start with Windows: Windows itself keeps the answer.
+      window.bpoTime.getStartup().then(st => {
+        $('startGroup').hidden = false;
+        $('startBtn').setAttribute('aria-checked', String(!!st.on));
+        $('startBtn').onclick = () => window.bpoTime.setStartup($('startBtn').getAttribute('aria-checked') !== 'true').then(on => {
+          $('startBtn').setAttribute('aria-checked', String(!!on));
+          toast(on ? 'BPO Time will open when you sign in to Windows.' : 'BPO Time will no longer open by itself.');
+        });
       });
       window.bpoTime.onUpdateReady(showUpdate);
       $('updateBtn').onclick = () => window.bpoTime.installUpdate();

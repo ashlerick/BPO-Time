@@ -53,5 +53,4 @@ To test a new version with a few people before the team gets it, publish a **pre
   needs a new endpoint name, and the old one stays until everyone has updated.
 - **If a version must be forced out** (a bug that touches people's time), the portal can refuse old versions with a
   clear "please update" message. That is not built yet; ask for it before it is needed.
-- Not built yet: starting with Windows, and a first-run welcome screen. The app starts when someone opens it or
-  presses Launch App in the portal.
+- Starting with Windows is a switch in Settings (off by default). Not built yet: a first-run welcome screen.

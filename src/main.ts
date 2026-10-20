@@ -2,7 +2,7 @@ import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeImage, powerMonitor
 import * as path from "path";
 import * as zlib from "zlib";
 import * as sync from "./sync";
-import { desktopState, openAppWindows, sendToBottom, sendToTop } from "./winpos";
+import { desktopState, fitMaximizedBeside, openAppWindows, restoreFitted, sendToBottom, sendToTop, type Fitted } from "./winpos";
 import * as auth from "./auth";
 import * as attendance from "./attendance";
 import * as counts from "./counts";
@@ -23,6 +23,12 @@ let liftedForDesktop = false;
 // puts it back with Minimize.
 let stayOnTop = false;
 let hwnd = 0;
+// "Fit windows beside the panel" (a setting): when a break starts, maximized windows on this screen shrink to everything left of the
+// panel; they go back when the break ends or Minimize is pressed. `fitted` is what we changed, so we put back only that.
+let fitOn = false;
+let fitted: Fitted[] = [];
+// "Keep the panel in front during breaks" (a setting, on unless switched off).
+let keepFront = true;
 
 function crc32(buf: Buffer): number {
   let c = ~0;
@@ -113,10 +119,26 @@ function place(): void {
   if (!stayOnTop) sendToBottom(hwnd);
 }
 
+function unfitWindows(): void {
+  if (fitted.length === 0) return;
+  restoreFitted(fitted);
+  fitted = [];
+}
+
+function fitWindows(): void {
+  if (!win || win.isDestroyed()) return;
+  unfitWindows(); // never fit twice: put the first lot back before looking again
+  // Windows are placed in real pixels, the panel in scaled ones.
+  const panel = screen.dipToScreenRect(win, win.getBounds());
+  const work = screen.dipToScreenRect(null, screen.getPrimaryDisplay().workArea);
+  fitted = fitMaximizedBeside(hwnd, { left: work.x, top: work.y, right: panel.x, bottom: work.y + work.height });
+}
+
 // "Minimize" does not hide anything: it pushes the panel behind your apps. It stays on the desktop,
 // so the bare desktop is never shown without it.
 function minimize(): void {
   if (!win) return;
+  unfitWindows();
   stayOnTop = false; // this is how the break's stay-on-top is ended: by hand
   win.setAlwaysOnTop(false);
   sendToBottom(hwnd);
@@ -293,6 +315,25 @@ app.whenReady().then(() => {
   // Updates (released builds only): a newer version downloads in the background and installs on the next restart.
   ipcMain.handle("app:version", () => ({ version: app.getVersion(), updateReady: updates.ready(), testServer: auth.testServerHost() }));
   ipcMain.on("update:install", () => updates.installNow());
+  // The setting from the panel (Settings, "Fit windows beside the panel"). Switching it off during a break puts the windows back.
+  ipcMain.on("fit:set", (_e, on: unknown) => {
+    fitOn = on === true;
+    if (!fitOn) unfitWindows();
+  });
+  app.on("before-quit", unfitWindows);
+  ipcMain.on("front:set", (_e, on: unknown) => {
+    keepFront = on !== false;
+  });
+  // "Start with Windows": the choice lives in Windows itself, so it is read back from there. We read "will it really launch", which is
+  // false when the person has switched BPO Time off in Task Manager's Startup apps, so the switch never says on when it is not.
+  // It works the same installed or run from source; from source, Windows is told to start Electron WITH this app's folder (the same
+  // way the bpotime:// link is registered above), so it never starts a bare Electron.
+  const loginOptions = () => (process.defaultApp && process.argv.length >= 2 ? { path: process.execPath, args: [path.resolve(process.argv[1])] } : {});
+  ipcMain.handle("startup:get", () => ({ on: app.getLoginItemSettings(loginOptions()).executableWillLaunchAtLogin }));
+  ipcMain.handle("startup:set", (_e, on: unknown) => {
+    app.setLoginItemSettings({ ...loginOptions(), openAtLogin: on === true });
+    return app.getLoginItemSettings(loginOptions()).executableWillLaunchAtLogin;
+  });
   updates.start((version) => {
     buildTrayMenu();
     win?.webContents.send("update:ready", version);
@@ -349,7 +390,12 @@ app.whenReady().then(() => {
   attendance.onChange((a) => {
     win?.webContents.send("attendance:state", a);
     const onBreak = !!a && "breaks" in a && a.breaks.some((b) => b.status === "taken" && !!b.startedAt && !b.endedAt);
-    if (onBreak && !wasOnBreak) holdOnTop();
+    if (onBreak && !wasOnBreak) {
+      if (keepFront) holdOnTop();
+      if (fitOn) fitWindows();
+    } else if (!onBreak && wasOnBreak) {
+      unfitWindows();
+    }
     wasOnBreak = onBreak;
   });
   ipcMain.handle("attendance:get", () => attendance.get());
