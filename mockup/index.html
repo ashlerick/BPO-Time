@@ -201,6 +201,8 @@
   .brk:disabled { cursor: default; }
   .brk:disabled > span { opacity: .55; }
   .brk.run { border-color: var(--brand-hi); background: rgba(31,167,99,.16); }
+  .brk.run.soon { border-color: var(--warn); background: rgba(245,166,35,.14); }
+  .brk.run.soon .bt { color: var(--warn); }
   .brk.grace { border-color: var(--warn); background: rgba(245,166,35,.14); }
   .brk.grace .bt { color: var(--warn); }
   .brk.over { border-color: var(--bad); background: rgba(229,83,75,.16); }
@@ -291,6 +293,14 @@
   .srow .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
   .srow[aria-checked="true"] .sw { background: var(--brand-hi); }
   .srow[aria-checked="true"] .sw::after { transform: translateX(14px); }
+  /* the volume row in Settings > Alerts: three choices and a sample button */
+  .volrow { display: flex; align-items: center; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--line); }
+  .volrow b { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .volrow button { font: inherit; font-size: 11.5px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; cursor: pointer; }
+  .volrow button[aria-pressed="true"] { color: var(--ink); border-color: var(--brand-hi); background: rgba(31,167,99,.16); }
+  .volrow button:focus-visible, .sample:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
+  .volrow button:disabled, .sample:disabled { opacity: .5; cursor: default; }
+  .sample { display: block; width: 100%; text-align: left; font: inherit; font-size: 12px; font-weight: 600; color: var(--brand-hi); background: transparent; border: 0; border-top: 1px solid var(--line); padding: 9px 12px; cursor: pointer; }
   .menu .ver { padding: 6px 10px 2px; font-size: 11px; color: var(--muted); }
   #updateBtn { color: var(--ok); font-weight: 600; }
   .menu .danger-item { color: var(--danger-text); }
@@ -438,6 +448,12 @@
           <div class="sbox">
             <button class="srow" id="frontBtn" type="button" role="switch" aria-checked="true"><span class="stext"><b>Keep the panel in front during breaks</b><small>When a break starts, the panel comes to the front and stays there until you press Minimize.</small></span><span class="sw" aria-hidden="true"></span></button>
             <button class="srow" id="fitBtn" type="button" role="switch" aria-checked="false"><span class="stext"><b>Fit windows beside the panel</b><small>When a break starts, a maximized window shrinks to sit next to the panel, and goes back when the break ends.</small></span><span class="sw" aria-hidden="true"></span></button>
+          </div>
+          <div class="sgroup">Alerts</div>
+          <div class="sbox">
+            <button class="srow" id="alarmBtn" type="button" role="switch" aria-checked="true"><span class="stext"><b>Alarm during breaks</b><small>A soft chime one minute before a break ends, when it ends, and while you are over.</small></span><span class="sw" aria-hidden="true"></span></button>
+            <div class="volrow" role="group" aria-label="Alarm volume"><b>Volume</b><button type="button" data-vol="soft">Soft</button><button type="button" data-vol="normal">Normal</button><button type="button" data-vol="loud">Loud</button></div>
+            <button class="sample" id="sampleBtn" type="button">Play sample</button>
           </div>
           <div id="startGroup">
             <div class="sgroup">Windows</div>
@@ -816,6 +832,52 @@
     return 'Taken \u00b7 ' + mmss(secs);
   }
 
+  // ---- Break alarm: sound only, no pop-up text. A chime a minute before the limit, a two-note chime at the limit, and again each minute while over (three times at most).
+  // Settings > Alerts turns it off or sets the volume; both are remembered on this PC.
+  const ALARM_WARN_SECONDS = 60, ALARM_MAX_REPEATS = 3, ALARM_STALE_SECONDS = 5;
+  // The moment each alarm belongs to, as seconds left on the break.
+  const ALARM_MOMENT = { warn: ALARM_WARN_SECONDS, limit: 0, over1: -60, over2: -120, over3: -180 };
+  // Every alarm whose moment has been reached for a break with `left` seconds to go.
+  const alarmsDue = left => Object.keys(ALARM_MOMENT).filter(k => left <= ALARM_MOMENT[k]);
+  let alarmOn = true, alarmVol = 'normal';
+  try { alarmOn = localStorage.getItem('bpotime:alarm') !== '0'; } catch (e) { /* storage blocked: stays on */ }
+  try { const v = localStorage.getItem('bpotime:alarmvol'); if (v === 'soft' || v === 'loud') alarmVol = v; } catch (e) { /* storage blocked: normal */ }
+  const VOLUME = { soft: 0.07, normal: 0.16, loud: 0.34 };
+  let audio = null;
+  const chime = notes => {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      const peak = VOLUME[alarmVol], t0 = audio.currentTime + 0.02;
+      notes.forEach((hz, i) => {
+        const o = audio.createOscillator(), g = audio.createGain(), at = t0 + i * 0.32;
+        o.type = 'sine'; o.frequency.value = hz;
+        g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.9);
+        o.connect(g); g.connect(audio.destination); o.start(at); o.stop(at + 0.95);
+      });
+    } catch (e) { /* no audio available: the colours and the notice still show */ }
+  };
+  const fireAlarm = kind => chime(kind === 'warn' ? [659] : [659, 880]);
+  // What has already sounded, per running break. A moment more than a few seconds old (the app was closed, the PC woke up) is
+  // recorded without a sound, so nothing old is replayed.
+  const alarmSeen = new Map();
+  function checkAlarm(slot, startedAt, left) {
+    const key = slot + '@' + startedAt;
+    if (!alarmSeen.has(key)) alarmSeen.set(key, new Set());
+    const done = alarmSeen.get(key);
+    for (const d of alarmsDue(left)) {
+      if (done.has(d)) continue;
+      done.add(d);
+      if (ALARM_MOMENT[d] - left > ALARM_STALE_SECONDS) continue;
+      if (alarmOn && live) fireAlarm(d);
+    }
+  }
+  const paintAlarm = () => {
+    $('alarmBtn').setAttribute('aria-checked', String(alarmOn));
+    for (const b of document.querySelectorAll('.volrow button')) { b.setAttribute('aria-pressed', String(b.dataset.vol === alarmVol)); b.disabled = !alarmOn; }
+    $('sampleBtn').disabled = !alarmOn;
+  };
+
   // The three break buttons: a countdown while running (red and counting up past the limit), a result afterwards.
   function paintBreaks() {
     const a = s.att, box = $('breaks');
@@ -833,7 +895,8 @@
       else if (!e.endedAt) {
         const left = allow - Math.floor((serverNow - new Date(e.startedAt).getTime()) / 1000);
         // past 0:00 there is a grace period first: amber while inside it, red only once it has run out
-        if (left >= 0) { cls += ' run'; text = mmss(left); }
+        checkAlarm(slot, e.startedAt, left);
+        if (left >= 0) { cls += ' run' + (left <= ALARM_WARN_SECONDS ? ' soon' : ''); text = mmss(left); }
         else if (-left <= grace) { cls += ' grace'; text = '+' + mmss(-left); }
         else { cls += ' over'; text = '+' + mmss(-left); }
       } else if (e.overSeconds > grace) { cls += ' over'; text = '+' + mmss(e.overSeconds) + ' over'; off = true; }
@@ -1050,6 +1113,18 @@
     try { localStorage.setItem('bpotime:fitwindows', fitOn ? '1' : '0'); } catch (e) { /* not remembered */ }
     toast(fitOn ? 'Maximized windows will fit beside the panel when a break starts.' : 'Windows are left alone during breaks.');
   };
+  // Alarm during breaks: on unless switched off; the volume and a sample sit right below it.
+  paintAlarm();
+  $('alarmBtn').onclick = () => {
+    alarmOn = !alarmOn; paintAlarm();
+    try { localStorage.setItem('bpotime:alarm', alarmOn ? '1' : '0'); } catch (e) { /* not remembered */ }
+    toast(alarmOn ? 'You will hear a chime when a break is about to end.' : 'The break alarm is off. The timer still changes colour.');
+  };
+  for (const b of document.querySelectorAll('.volrow button')) b.onclick = () => {
+    alarmVol = b.dataset.vol; paintAlarm(); chime([659, 880]);
+    try { localStorage.setItem('bpotime:alarmvol', alarmVol); } catch (e) { /* not remembered */ }
+  };
+  $('sampleBtn').onclick = () => { chime([659, 880]); toast('That is how the alarm sounds at ' + alarmVol + ' volume.'); };
   $('more').onclick = () => {
     const open = $('menu').hidden;
     $('menu').hidden = !open; $('more').setAttribute('aria-expanded', String(open));
