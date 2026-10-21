@@ -161,7 +161,8 @@ Rules:
 2. [x] Breaks and lunch. (The offline queue and idle detection were dropped.)
 3. [x] Bottom-most widget, tray, auto-start, installer, auto-update.
 4. [x] Shift and lateness, announcements, birthdays, quick links, themes (0.1.1).
-5. [ ] Code-signing certificate.
+5. [x] Break alarm (0.1.6): a chime a minute before the limit, at the limit and once a minute while over (three times at most), sound only; switch and volume in Settings > Alerts.
+6. [ ] Code-signing certificate.
 
 ## 8. Risks
 

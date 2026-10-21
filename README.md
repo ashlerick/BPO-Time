@@ -3,7 +3,7 @@
 A small Windows sidebar app for the [BPO Portal](https://github.com/ashlerick/BPO-Portal): it tracks
 work time and syncs with the portal, so the PC and the portal's Attendance page always agree.
 
-**Status: version 0.1.3 (beta).** Windows only. Installer and update steps: [docs/release.md](./docs/release.md).
+**Status: version 0.1.6 (beta).** Windows only. Installer and update steps: [docs/release.md](./docs/release.md).
 
 - Why this exists and what was decided: [docs/context.md](./docs/context.md)
 - The design: [docs/plan.md](./docs/plan.md)
@@ -40,6 +40,11 @@ portal's `backend/lib/breaks.ts`, so changing a number or a rule later is a smal
 - **Timer on the button:** it counts down from the limit; past zero it turns red and shows how far over
   (`+2:14`). The big "worked today" timer pauses while on a break and, while a break is running, takes
   off at most that slot's allowance.
+- **Break alarm (0.1.6):** sound only, no pop-up text. A soft note one minute before a break's limit (the timer turns
+  amber), a two-note chime at the limit, then the same chime once a minute while over, three times at most. It follows the
+  limits and grace the portal sends, plays only while a break is running, and stays silent for a moment that is more than a few
+  seconds old (the app was closed, the PC slept), so nothing old is replayed. In More, Settings, **Alerts**: a switch (on by
+  default), a volume (Soft, Normal, Loud) and Play sample, remembered on that PC.
 - **Chat messages:** starting a break copies `Taking my break` (or `Taking my lunch`) to the clipboard and ending it copies
   `Back from break` (or `Back from lunch`). Clocking in copies `Good morning, clock in!` and clocking out copies
   `Good night, clock out!`. All of these are one switch in More ("Copy chat messages"), on by default.

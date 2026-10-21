@@ -1,7 +1,7 @@
 # BPO Time: instructions for a coding session
 
 Read this first, then [docs/context.md](./docs/context.md) (why this exists and what was decided) and
-[docs/plan.md](./docs/plan.md) (the design). The app is built and shipping (version 0.1.1); the plan describes what exists.
+[docs/plan.md](./docs/plan.md) (the design). The app is built and shipping (version 0.1.6); the plan describes what exists.
 
 ## What this repo is
 
@@ -47,7 +47,7 @@ product from the portal and has its own repo, deliberately.
 - **Technology:** Electron + TypeScript (same stack as the portal). Windows only.
 - **Panel:** name and status, today's time (large), week total, Clock in, slide to clock out, breaks and lunch, shift and
   lateness, unread notifications and to-dos due, highlighted announcements, birthdays, quick links, light and dark theme,
-  tray icon, auto-start with Windows, auto-update.
+  tray icon, auto-start with Windows, auto-update, and a sound-only break alarm (Settings > Alerts).
 - **Docking:** a frameless bottom-most desktop widget on the right edge (above the desktop, below other apps).
   A reserved-space AppBar was tried and replaced so desktop icons stay put.
 - **No idle detection.** Decided 2026-10-19; do not add it.
@@ -91,7 +91,7 @@ Ask the user before changing any of these.
 
 ## Where the work stands
 
-Version 0.1.1 is released with installer and auto-update. Not done: a code-signing certificate and an offline
+Version 0.1.6 is released with installer and auto-update. Not done: a code-signing certificate and an offline
 queue (which is not planned). Releases: `docs/release.md`. Testing against a staging server: `docs/testing.md`.
 
 ## Conventions once code exists
