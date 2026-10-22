@@ -819,6 +819,8 @@
 
   // The tooltip says what the break is while it is available, and what happened once it is not.
   const SLOT_FULL = { morning: 'Morning break', lunch: 'Lunch', afternoon: 'Afternoon break' };
+  // Colour only: a break up to this far over shows amber, red past it. What is recorded as over (the grace above) is unchanged.
+  const SOFT_OVER_SECONDS = 300;
   function breakTip(slot, e, allow, grace, entries) {
     const mins = Math.round(allow / 60);
     if (!e) return SLOT_FULL[slot] + ' \u00b7 ' + mins + ' minutes';
@@ -828,7 +830,7 @@
     }
     if (!e.endedAt) return 'Tap to end ' + (slot === 'lunch' ? 'lunch' : 'your break');
     const secs = Math.round((new Date(e.endedAt) - new Date(e.startedAt)) / 1000);
-    if (e.overSeconds > grace) return 'Taken \u00b7 ' + mmss(secs) + ', ' + mmss(e.overSeconds) + ' over';
+    if (e.overSeconds > grace) return 'Taken \u00b7 ' + mmss(secs) + ', ' + mmss(e.overSeconds) + ' over, recorded as over';
     return 'Taken \u00b7 ' + mmss(secs);
   }
 
@@ -897,9 +899,9 @@
         // past 0:00 there is a grace period first: amber while inside it, red only once it has run out
         checkAlarm(slot, e.startedAt, left);
         if (left >= 0) { cls += ' run' + (left <= ALARM_WARN_SECONDS ? ' soon' : ''); text = mmss(left); }
-        else if (-left <= grace) { cls += ' grace'; text = '+' + mmss(-left); }
+        else if (-left <= Math.max(grace, SOFT_OVER_SECONDS)) { cls += ' grace'; text = '+' + mmss(-left); }
         else { cls += ' over'; text = '+' + mmss(-left); }
-      } else if (e.overSeconds > grace) { cls += ' over'; text = '+' + mmss(e.overSeconds) + ' over'; off = true; }
+      } else if (e.overSeconds > grace) { cls += e.overSeconds <= SOFT_OVER_SECONDS ? ' grace' : ' over'; text = '+' + mmss(e.overSeconds) + ' over'; off = true; }
       else { cls += ' done'; text = '\u2713 ' + mmss((new Date(e.endedAt) - new Date(e.startedAt)) / 1000); off = true; }
       if (armedSlot === slot) cls += ' armed';
       btn.className = cls;
