@@ -324,15 +324,21 @@ app.whenReady().then(() => {
   ipcMain.on("front:set", (_e, on: unknown) => {
     keepFront = on !== false;
   });
-  // "Start with Windows": the choice lives in Windows itself, so it is read back from there. We read "will it really launch", which is
-  // false when the person has switched BPO Time off in Task Manager's Startup apps, so the switch never says on when it is not.
-  // It works the same installed or run from source; from source, Windows is told to start Electron WITH this app's folder (the same
+  // "Start with Windows": the choice lives in Windows itself, so it is read back from there, and the switch is off when the person has
+  // switched BPO Time off in Task Manager's Startup apps. It works the same installed or run from source; from source, Windows is told to start Electron WITH this app's folder (the same
   // way the bpotime:// link is registered above), so it never starts a bare Electron.
   const loginOptions = () => (process.defaultApp && process.argv.length >= 2 ? { path: process.execPath, args: [path.resolve(process.argv[1])] } : {});
-  ipcMain.handle("startup:get", () => ({ on: app.getLoginItemSettings(loginOptions()).executableWillLaunchAtLogin }));
+  // executableWillLaunchAtLogin is not used: in an installed build Electron reports it false even right after the entry was written
+  // (launchItems comes back empty), so the switch snapped back off. openAtLogin says the entry exists; a launch item that Task
+  // Manager has switched off still reports itself as disabled, and that is what turns the switch off.
+  const startsAtLogin = () => {
+    const s = app.getLoginItemSettings(loginOptions());
+    return s.openAtLogin && !s.launchItems?.some((i) => i.enabled === false);
+  };
+  ipcMain.handle("startup:get", () => ({ on: startsAtLogin() }));
   ipcMain.handle("startup:set", (_e, on: unknown) => {
     app.setLoginItemSettings({ ...loginOptions(), openAtLogin: on === true });
-    return app.getLoginItemSettings(loginOptions()).executableWillLaunchAtLogin;
+    return startsAtLogin();
   });
   updates.start((version) => {
     buildTrayMenu();
