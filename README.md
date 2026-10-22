@@ -32,7 +32,7 @@ portal's `backend/lib/breaks.ts`, so changing a number or a rule later is a smal
   recorded as not over; past it the timer is red and the full time over the limit is recorded. Returning early is never
   flagged (the deduction is fixed), so the grace only applies after the limit.
 - **Colour is softer than the record:** amber inside the grace and for one more minute after it, red after that (a finished
-  break shows the same; the text says how far over and the tooltip says it was recorded as over).
+  break shows the same; the text says how far over).
 - **Skipping:** starting a later slot closes any earlier slot that was not used and records it as
   `not_taken` (the app asks first). Clocking out ends a running break (it counts as taken) and records
   every unused slot as `not_taken`.
