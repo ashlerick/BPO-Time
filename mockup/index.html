@@ -830,7 +830,7 @@
     }
     if (!e.endedAt) return 'Tap to end ' + (slot === 'lunch' ? 'lunch' : 'your break');
     const secs = Math.round((new Date(e.endedAt) - new Date(e.startedAt)) / 1000);
-    if (e.overSeconds > grace) return 'Taken \u00b7 ' + mmss(secs) + ', ' + mmss(e.overSeconds) + ' over';
+    if (e.overSeconds > grace) return 'Taken \u00b7 ' + mmss(secs) + ', over';
     return 'Taken \u00b7 ' + mmss(secs);
   }
 
