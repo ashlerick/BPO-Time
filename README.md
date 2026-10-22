@@ -31,15 +31,15 @@ portal's `backend/lib/breaks.ts`, so changing a number or a rule later is a smal
 - **Grace:** 60 seconds past the limit before a break counts as over. Inside the grace the timer is amber and the break is
   recorded as not over; past it the timer is red and the full time over the limit is recorded. Returning early is never
   flagged (the deduction is fixed), so the grace only applies after the limit.
-- **Colour is softer than the record:** up to 5 minutes over, the timer and the finished break stay amber (the text still
-  says how far over, and the tooltip says it was recorded as over); red only past 5 minutes.
+- **Colour is softer than the record:** amber inside the grace, then orange for one more minute, red after that (a finished
+  break shows the same; the text says how far over and the tooltip says it was recorded as over).
 - **Skipping:** starting a later slot closes any earlier slot that was not used and records it as
   `not_taken` (the app asks first). Clocking out ends a running break (it counts as taken) and records
   every unused slot as `not_taken`.
   - morning only: lunch and afternoon are `not_taken` at clock-out
   - lunch only: the morning break is `not_taken`; the afternoon break stays available
   - afternoon only: asks first, then the morning break and lunch are `not_taken`
-- **Timer on the button:** it counts down from the limit; past zero it turns amber, then red after 5 minutes, and shows how far over
+- **Timer on the button:** it counts down from the limit; past zero it turns amber, orange after the grace, red a minute later, and shows how far over
   (`+2:14`). The big "worked today" timer pauses while on a break and, while a break is running, takes
   off at most that slot's allowance.
 - **Break alarm (0.1.6):** sound only, no pop-up text. A soft note one minute before a break's limit (the timer turns
