@@ -8,7 +8,7 @@
   /* Same look as the portal: deep green with gold accents, dark only. */
   :root {
     --bg: #07160f; --panel: #0b2016; --raise: #0f2b1e; --ink: #ecf5ef; --muted: #8fa89a; --line: rgba(255,255,255,.09);
-    --brand: #158a52; --brand-hi: #1fa763; --gold: #fbbf24; --ok: #34d399; --warn: #f5a623; --orange: #f97316; --bad: #e5534b; --idle: #a78bfa;
+    --brand: #158a52; --brand-hi: #1fa763; --gold: #fbbf24; --ok: #34d399; --warn: #f5a623; --bad: #e5534b; --idle: #a78bfa;
     --thumb: rgba(255,255,255,.2); --danger-text: #ff8b84;
     --tip-bg: #020b07; --tip-ink: #ecf5ef;
     --accent: var(--gold); --accent2: #e5534b;
@@ -16,7 +16,7 @@
   /* Light mode: same greens, on a pale page. Switched from the More menu and kept in step with the portal. */
   html[data-theme="light"] {
     --bg: #e6efe9; --panel: #ffffff; --raise: #f3f8f5; --ink: #10261b; --muted: #55705f; --line: rgba(10,40,25,.16);
-    --brand: #158a52; --brand-hi: #0f7a47; --gold: #a15a07; --ok: #0f9d63; --warn: #a15a07; --orange: #c2410c; --bad: #c4372c; --idle: #6d4ae0;
+    --brand: #158a52; --brand-hi: #0f7a47; --gold: #a15a07; --ok: #0f9d63; --warn: #a15a07; --bad: #c4372c; --idle: #6d4ae0;
     --thumb: rgba(10,40,25,.28); --danger-text: #c4372c;
     --tip-bg: #10261b; --tip-ink: #ffffff;
     --accent2: #c4372c;
@@ -205,8 +205,6 @@
   .brk.run.soon .bt { color: var(--warn); }
   .brk.grace { border-color: var(--warn); background: rgba(245,166,35,.14); }
   .brk.grace .bt { color: var(--warn); }
-  .brk.late { border-color: var(--orange); background: rgba(249,115,22,.16); }
-  .brk.late .bt { color: var(--orange); }
   .brk.over { border-color: var(--bad); background: rgba(229,83,75,.16); }
   .brk.over .bt, .brk.over .bl { color: var(--bad); }
   .brk.done .bt { color: var(--ok); }
@@ -821,8 +819,8 @@
 
   // The tooltip says what the break is while it is available, and what happened once it is not.
   const SLOT_FULL = { morning: 'Morning break', lunch: 'Lunch', afternoon: 'Afternoon break' };
-  // Colour only: amber inside the grace, orange for this long after it, then red. What is recorded as over (the grace) is unchanged.
-  const ORANGE_SECONDS = 60;
+  // Colour only: amber inside the grace and for this long after it, then red. What is recorded as over (the grace) is unchanged.
+  const AMBER_EXTRA_SECONDS = 60;
   function breakTip(slot, e, allow, grace, entries) {
     const mins = Math.round(allow / 60);
     if (!e) return SLOT_FULL[slot] + ' \u00b7 ' + mins + ' minutes';
@@ -901,10 +899,9 @@
         // past 0:00 there is a grace period first: amber while inside it, red only once it has run out
         checkAlarm(slot, e.startedAt, left);
         if (left >= 0) { cls += ' run' + (left <= ALARM_WARN_SECONDS ? ' soon' : ''); text = mmss(left); }
-        else if (-left <= grace) { cls += ' grace'; text = '+' + mmss(-left); }
-        else if (-left <= grace + ORANGE_SECONDS) { cls += ' late'; text = '+' + mmss(-left); }
+        else if (-left <= grace + AMBER_EXTRA_SECONDS) { cls += ' grace'; text = '+' + mmss(-left); }
         else { cls += ' over'; text = '+' + mmss(-left); }
-      } else if (e.overSeconds > grace) { cls += e.overSeconds <= grace + ORANGE_SECONDS ? ' late' : ' over'; text = '+' + mmss(e.overSeconds) + ' over'; off = true; }
+      } else if (e.overSeconds > grace) { cls += e.overSeconds <= grace + AMBER_EXTRA_SECONDS ? ' grace' : ' over'; text = '+' + mmss(e.overSeconds) + ' over'; off = true; }
       else { cls += ' done'; text = '\u2713 ' + mmss((new Date(e.endedAt) - new Date(e.startedAt)) / 1000); off = true; }
       if (armedSlot === slot) cls += ' armed';
       btn.className = cls;
