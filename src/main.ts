@@ -354,6 +354,9 @@ app.whenReady().then(() => {
   ipcMain.on("portal:open", (_e, page?: string, id?: string) => {
     if (page === "announcements" && typeof id === "string" && UUID.test(id)) {
       void shell.openExternal(`${PORTAL_URL}announcements/${id}`);
+    } else if (page === "connect") {
+      // The "not signed in" button: the portal connects this PC by itself once the person is signed in there (no secret in the link).
+      void shell.openExternal(`${PORTAL_URL}?connect=app`);
     } else {
       void shell.openExternal(page && PORTAL_PAGES.includes(page) ? PORTAL_URL + page : PORTAL_URL);
     }

@@ -621,9 +621,9 @@
       $('avatar').textContent = '?';
       notice.hidden = false;
       notice.innerHTML = '<b>Connect your account</b>' + (a.message ? a.message + ' ' : '') +
-        'Open the BPO Portal and press <b style="display:inline">Launch App (BETA)</b> to sign this PC in.' +
+        'Open the BPO Portal and sign in there if asked. This PC connects by itself.' +
         '<button class="btn primary" id="noticePortal">Open the portal</button>';
-      $('noticePortal').onclick = () => window.bpoTime ? window.bpoTime.openPortal() : toast('This would open the portal.');
+      $('noticePortal').onclick = () => window.bpoTime ? window.bpoTime.openPortal('connect') : toast('This would open the portal.');
     }
     $('soWrap').hidden = !auth.signedIn || !window.bpoTime;
     if (window.bpoTime) updateBusy(a);
