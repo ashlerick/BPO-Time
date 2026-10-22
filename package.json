@@ -1,6 +1,6 @@
 {
   "name": "bpo-time",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "BPO Time: desktop sidebar for the BPO Portal",
   "private": true,
   "main": "dist/main.js",

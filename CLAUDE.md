@@ -1,7 +1,7 @@
 # BPO Time: instructions for a coding session
 
 Read this first, then [docs/context.md](./docs/context.md) (why this exists and what was decided) and
-[docs/plan.md](./docs/plan.md) (the design). The app is built and shipping (version 0.1.7); the plan describes what exists.
+[docs/plan.md](./docs/plan.md) (the design). The app is built and shipping (version 0.1.8); the plan describes what exists.
 
 ## What this repo is
 
@@ -91,7 +91,7 @@ Ask the user before changing any of these.
 
 ## Where the work stands
 
-Version 0.1.7 is released with installer and auto-update. Not done: a code-signing certificate and an offline
+Version 0.1.8 is released with installer and auto-update. Not done: a code-signing certificate and an offline
 queue (which is not planned). Releases: `docs/release.md`. Testing against a staging server: `docs/testing.md`.
 
 ## Conventions once code exists
