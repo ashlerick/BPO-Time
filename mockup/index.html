@@ -472,7 +472,7 @@
         <div id="menuMessages" hidden>
           <button class="item back" id="messagesBack" type="button">&#8592; Settings</button>
           <div class="sgroup">Chat messages</div>
-          <p class="mintro">BPO Time copies these for you when you clock in or out or take a break. Paste them into your chat with Ctrl + V.</p>
+          <p class="mintro">BPO Time copies these for you when you clock in or out or take a break. Paste them into your chat with Ctrl + V. Your changes save by themselves.</p>
           <div class="sbox mrows">
             <label class="mrow">Clock in<small>Copied when you clock in</small><input id="msg-clockIn" maxlength="80" autocomplete="off"></label>
             <label class="mrow">Clock out<small>Copied when you clock out</small><input id="msg-clockOut" maxlength="80" autocomplete="off"></label>
@@ -1125,6 +1125,8 @@
     const input = $('msg-' + k);
     input.placeholder = CHAT_DEFAULT[k];
     // The panel is not focusable until asked, so a click alone never focuses the box: ask first, then focus it.
+    input.onchange = () => toast('Saved. BPO Time will copy this next time.');
+    input.onkeydown = e => { if (e.key === 'Enter') input.blur(); };
     input.onmousedown = () => { if (window.bpoTime && document.activeElement !== input) { window.bpoTime.setTyping(true); setTimeout(() => input.focus(), 60); } };
     input.value = chatLines[k] || '';
     input.oninput = () => {
