@@ -1121,6 +1121,8 @@
   for (const k of Object.keys(CHAT_DEFAULT)) {
     const input = $('msg-' + k);
     input.placeholder = CHAT_DEFAULT[k];
+    // The panel is not focusable until asked, so a click alone never focuses the box: ask first, then focus it.
+    input.onmousedown = () => { if (window.bpoTime && document.activeElement !== input) { window.bpoTime.setTyping(true); setTimeout(() => input.focus(), 60); } };
     input.onfocus = () => { if (window.bpoTime) window.bpoTime.setTyping(true); };
     input.onblur = () => { if (window.bpoTime) window.bpoTime.setTyping(false); };
     input.value = chatLines[k] || '';
