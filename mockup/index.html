@@ -278,6 +278,10 @@
   .sbox .srow + .srow { border-top: 1px solid var(--line); }
   .sbox .srow b { font-size: 13.5px; color: var(--ink); }
   .sbox .srow small { margin-top: 3px; font-size: 11.5px; color: var(--muted); opacity: .9; }
+  .mrow { display: block; padding: 9px 12px; font-size: 11.5px; color: var(--muted); }
+  .mrow + .mrow { border-top: 1px solid var(--line); }
+  .mrow input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; font-size: 13px; color: var(--ink); background: var(--raise); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; }
+  .mrow input:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 1px; }
   .menu.settings { padding: 8px; }
   .menu.settings { max-height: calc(100vh - 110px); overflow-y: auto; }
   .menu .item .chev { float: right; color: var(--muted); }
@@ -443,6 +447,7 @@
           <div class="sgroup">Chat</div>
           <div class="sbox">
             <button class="srow" id="copyBtn" type="button" role="switch" aria-checked="true"><span class="stext"><b>Copy chat messages</b><small>Copies a short line to paste in chat when you clock in or out, or start or end a break.</small></span><span class="sw" aria-hidden="true"></span></button>
+            <button class="sample" id="msgBtn" type="button">Customize messages &#8250;</button>
           </div>
           <div class="sgroup">Breaks</div>
           <div class="sbox">
@@ -460,6 +465,19 @@
             <div class="sbox">
                 <button class="srow" id="startBtn" type="button" role="switch" aria-checked="false"><span class="stext"><b>Start with Windows</b><small>Opens BPO Time when you sign in to Windows, so it is ready for you to clock in.</small></span><span class="sw" aria-hidden="true"></span></button>
             </div>
+          </div>
+        </div>
+        <div id="menuMessages" hidden>
+          <button class="item back" id="messagesBack" type="button">&#8592; Settings</button>
+          <div class="sgroup">Chat messages</div>
+          <div class="sbox mrows">
+            <label class="mrow">Clock in<input id="msg-clockIn" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">Clock out<input id="msg-clockOut" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">Start break<input id="msg-breakStart" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">End break<input id="msg-breakEnd" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">Start lunch<input id="msg-lunchStart" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">End lunch<input id="msg-lunchEnd" maxlength="80" autocomplete="off"></label>
+            <button class="sample" id="msgReset" type="button">Reset to defaults</button>
           </div>
         </div>
       </div>
@@ -1091,10 +1109,35 @@
   };
   // Footer: one "More" button holds What's recorded, Open portal and Sign out, so none is one slip away.
   // Settings opens inside the More menu, in place of its list (the panel is only 300 pixels wide, so there is no room beside it).
-  const showSettings = on => { $('menuMain').hidden = on; $('menuSettings').hidden = !on; $('menu').classList.toggle('settings', on); };
+  const showSettings = (on, sub) => { $('menuMain').hidden = on; $('menuSettings').hidden = !on || !!sub; $('menuMessages').hidden = !on || !sub; $('menu').classList.toggle('settings', on); };
   const closeMenu = () => { $('menu').hidden = true; $('more').setAttribute('aria-expanded', 'false'); showSettings(false); disarmSignOut(); };
   $('settingsBtn').onclick = () => showSettings(true);
   $('settingsBack').onclick = () => showSettings(false);
+  // The wording of the chat lines: remembered on this PC and told to the app, which does the copying. Empty means the default.
+  const CHAT_DEFAULT = { clockIn: 'Good morning, clock in!', clockOut: 'Good night, clock out!', breakStart: 'Taking my break', breakEnd: 'Back from break', lunchStart: 'Taking my lunch', lunchEnd: 'Back from lunch' };
+  let chatLines = {};
+  try { chatLines = JSON.parse(localStorage.getItem('bpotime:chatlines') || '{}') || {}; } catch (e) { /* storage blocked: defaults */ }
+  const sendChat = () => { if (window.bpoTime) window.bpoTime.setChatMessages(chatLines); };
+  for (const k of Object.keys(CHAT_DEFAULT)) {
+    const input = $('msg-' + k);
+    input.placeholder = CHAT_DEFAULT[k];
+    input.value = chatLines[k] || '';
+    input.oninput = () => {
+      const v = input.value.trim();
+      if (v) chatLines[k] = v; else delete chatLines[k];
+      try { localStorage.setItem('bpotime:chatlines', JSON.stringify(chatLines)); } catch (e) { /* not remembered */ }
+      sendChat();
+    };
+  }
+  sendChat();
+  $('msgBtn').onclick = () => showSettings(true, true);
+  $('messagesBack').onclick = () => showSettings(true);
+  $('msgReset').onclick = () => {
+    chatLines = {};
+    for (const k of Object.keys(CHAT_DEFAULT)) $('msg-' + k).value = '';
+    try { localStorage.removeItem('bpotime:chatlines'); } catch (e) { /* nothing to clear */ }
+    sendChat(); toast('The chat messages are back to the defaults.');
+  };
   // Keep the panel in front during breaks: on unless switched off. Remembered on this PC and told to the app.
   let frontOn = true;
   try { frontOn = localStorage.getItem('bpotime:keepfront') !== '0'; } catch (e) { /* storage blocked: stays on */ }

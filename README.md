@@ -49,7 +49,8 @@ portal's `backend/lib/breaks.ts`, so changing a number or a rule later is a smal
   default), a volume (Soft, Normal, Loud) and Play sample, remembered on that PC.
 - **Chat messages:** starting a break copies `Taking my break` (or `Taking my lunch`) to the clipboard and ending it copies
   `Back from break` (or `Back from lunch`). Clocking in copies `Good morning, clock in!` and clocking out copies
-  `Good night, clock out!`. All of these are one switch in More ("Copy chat messages"), on by default.
+  `Good night, clock out!`. All of these are one switch in More ("Copy chat messages"), on by default. "Customize messages" under it lets
+  each person change the wording of the six lines (kept on that PC; a blank field uses the default).
 - **Server keeps the time.** Starts and ends are recorded by the portal, like clock in and out, so a
   restart or a wrong PC clock cannot change them. Only start and end times are stored.
 - **Not done yet:** the portal's attendance reports and the Excel export still compute hours from

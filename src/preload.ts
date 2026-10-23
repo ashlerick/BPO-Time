@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("bpoTime", {
   installUpdate: () => ipcRenderer.send("update:install"),
   setFitWindows: (on: boolean) => ipcRenderer.send("fit:set", on),
   setKeepFront: (on: boolean) => ipcRenderer.send("front:set", on),
+  setChatMessages: (lines: Record<string, string>) => ipcRenderer.send("chat:set", lines),
   getStartup: () => ipcRenderer.invoke("startup:get"),
   setStartup: (on: boolean) => ipcRenderer.invoke("startup:set", on),
   getFeed: () => ipcRenderer.invoke("feed:get"),

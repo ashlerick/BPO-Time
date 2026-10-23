@@ -29,6 +29,17 @@ let fitOn = false;
 let fitted: Fitted[] = [];
 // "Keep the panel in front during breaks" (a setting, on unless switched off).
 let keepFront = true;
+// The chat lines copied on clock in/out and break start/end. The panel sends the person's own wording (Settings > Chat); these are the defaults.
+const DEFAULT_CHAT = {
+  clockIn: "Good morning, clock in!",
+  clockOut: "Good night, clock out!",
+  breakStart: "Taking my break",
+  lunchStart: "Taking my lunch",
+  breakEnd: "Back from break",
+  lunchEnd: "Back from lunch",
+};
+type ChatKey = keyof typeof DEFAULT_CHAT;
+let chat: Record<ChatKey, string> = { ...DEFAULT_CHAT };
 
 function crc32(buf: Buffer): number {
   let c = ~0;
@@ -324,6 +335,16 @@ app.whenReady().then(() => {
   ipcMain.on("front:set", (_e, on: unknown) => {
     keepFront = on !== false;
   });
+  ipcMain.on("chat:set", (_e, lines: unknown) => {
+    const next = { ...DEFAULT_CHAT };
+    if (lines && typeof lines === "object") {
+      for (const k of Object.keys(DEFAULT_CHAT) as ChatKey[]) {
+        const v = (lines as Record<string, unknown>)[k];
+        if (typeof v === "string" && v.trim()) next[k] = v.trim().slice(0, 80);
+      }
+    }
+    chat = next;
+  });
   // "Start with Windows": the choice lives in Windows itself, so it is read back from there, and the switch is off when the person has
   // switched BPO Time off in Task Manager's Startup apps. It works the same installed or run from source; from source, Windows is told to start Electron WITH this app's folder (the same
   // way the bpotime:// link is registered above), so it never starts a bare Electron.
@@ -415,7 +436,7 @@ app.whenReady().then(() => {
     const wasIn = !!(before && "checkedIn" in before && before.checkedIn);
     const r = await attendance.clockIn();
     if (r.ok && copy === true && !wasIn) {
-      const text = "Good morning, clock in!";
+      const text = chat.clockIn;
       clipboard.writeText(text);
       return { ok: true, message: `${r.message} Copied “${text}” to your clipboard.` };
     }
@@ -426,7 +447,7 @@ app.whenReady().then(() => {
     const wasOut = !!(before && "checkedOut" in before && before.checkedOut);
     const r = await attendance.clockOut();
     if (r.ok && copy === true && !wasOut) {
-      const text = "Good night, clock out!";
+      const text = chat.clockOut;
       clipboard.writeText(text);
       return { ok: true, message: `${r.message} Copied “${text}” to your clipboard.` };
     }
@@ -438,7 +459,7 @@ app.whenReady().then(() => {
     if (slot !== "morning" && slot !== "lunch" && slot !== "afternoon") return { ok: false, message: "That break is not one of the three." };
     const r = await attendance.startBreak(slot);
     if (r.ok && copy === true) {
-      const text = slot === "lunch" ? "Taking my lunch" : "Taking my break";
+      const text = slot === "lunch" ? chat.lunchStart : chat.breakStart;
       clipboard.writeText(text);
       return { ok: true, message: `${r.message} Copied \u201c${text}\u201d to your clipboard.` };
     }
@@ -450,7 +471,7 @@ app.whenReady().then(() => {
     const running = current && "breaks" in current ? current.breaks.find((b) => b.status === "taken" && b.startedAt && !b.endedAt) : undefined;
     const r = await attendance.endBreak();
     if (r.ok && copy === true && running) {
-      const text = running.slot === "lunch" ? "Back from lunch" : "Back from break";
+      const text = running.slot === "lunch" ? chat.lunchEnd : chat.breakEnd;
       clipboard.writeText(text);
       return { ok: true, message: `${r.message} Copied “${text}” to your clipboard.` };
     }
