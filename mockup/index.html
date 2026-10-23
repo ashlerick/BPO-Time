@@ -1110,7 +1110,7 @@
   // Footer: one "More" button holds What's recorded, Open portal and Sign out, so none is one slip away.
   // Settings opens inside the More menu, in place of its list (the panel is only 300 pixels wide, so there is no room beside it).
   const showSettings = (on, sub) => { $('menuMain').hidden = on; $('menuSettings').hidden = !on || !!sub; $('menuMessages').hidden = !on || !sub; $('menu').classList.toggle('settings', on); };
-  const closeMenu = () => { $('menu').hidden = true; $('more').setAttribute('aria-expanded', 'false'); showSettings(false); if (window.bpoTime) window.bpoTime.setTyping(false); disarmSignOut(); };
+  const closeMenu = () => { $('menu').hidden = true; $('more').setAttribute('aria-expanded', 'false'); showSettings(false); disarmSignOut(); };
   $('settingsBtn').onclick = () => showSettings(true);
   $('settingsBack').onclick = () => showSettings(false);
   // The wording of the chat lines: remembered on this PC and told to the app, which does the copying. Empty means the default.
@@ -1133,7 +1133,7 @@
   }
   sendChat();
   $('msgBtn').onclick = () => showSettings(true, true);
-  $('messagesBack').onclick = () => { if (window.bpoTime) window.bpoTime.setTyping(false); showSettings(true); };
+  $('messagesBack').onclick = () => showSettings(true);
   $('msgReset').onclick = () => {
     chatLines = {};
     for (const k of Object.keys(CHAT_DEFAULT)) $('msg-' + k).value = '';
