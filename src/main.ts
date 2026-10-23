@@ -335,6 +335,14 @@ app.whenReady().then(() => {
   ipcMain.on("front:set", (_e, on: unknown) => {
     keepFront = on !== false;
   });
+  // The panel never takes keyboard focus (so clicking it doesn't pull it above your work), which also means nothing can be typed in it.
+  // While a text box in the panel is being used it can take focus; when the box is left, it goes back to being focus-free and to the bottom.
+  ipcMain.on("typing:set", (_e, on: unknown) => {
+    if (!win) return;
+    win.setFocusable(on === true);
+    if (on === true) win.focus();
+    else if (!stayOnTop) sendToBottom(hwnd);
+  });
   ipcMain.on("chat:set", (_e, lines: unknown) => {
     const next = { ...DEFAULT_CHAT };
     if (lines && typeof lines === "object") {

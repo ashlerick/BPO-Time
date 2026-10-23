@@ -1121,6 +1121,8 @@
   for (const k of Object.keys(CHAT_DEFAULT)) {
     const input = $('msg-' + k);
     input.placeholder = CHAT_DEFAULT[k];
+    input.onfocus = () => { if (window.bpoTime) window.bpoTime.setTyping(true); };
+    input.onblur = () => { if (window.bpoTime) window.bpoTime.setTyping(false); };
     input.value = chatLines[k] || '';
     input.oninput = () => {
       const v = input.value.trim();
