@@ -279,6 +279,9 @@
   .sbox .srow b { font-size: 13.5px; color: var(--ink); }
   .sbox .srow small { margin-top: 3px; font-size: 11.5px; color: var(--muted); opacity: .9; }
   .mrow { display: block; padding: 9px 12px; font-size: 11.5px; color: var(--muted); }
+  .msave { display: block; width: calc(100% - 24px); margin: 10px 12px; font: inherit; font-size: 13px; font-weight: 700; color: #fff; background: var(--brand, #1fa763); border: 0; border-radius: 8px; padding: 9px; cursor: pointer; }
+  .msave:disabled { opacity: .45; cursor: default; }
+  .msave:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 2px; }
   .mintro { margin: 0 4px 8px; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
   .mrow small { display: block; margin-top: 2px; font-size: 11px; opacity: .85; }
   .mrow + .mrow { border-top: 1px solid var(--line); }
@@ -472,7 +475,7 @@
         <div id="menuMessages" hidden>
           <button class="item back" id="messagesBack" type="button">&#8592; Settings</button>
           <div class="sgroup">Chat messages</div>
-          <p class="mintro">BPO Time copies these for you when you clock in or out or take a break. Paste them into your chat with Ctrl + V. Your changes save by themselves.</p>
+          <p class="mintro">BPO Time copies these for you when you clock in or out or take a break. Paste them into your chat with Ctrl + V. Press Save messages to keep your changes.</p>
           <div class="sbox mrows">
             <label class="mrow">Clock in<small>Copied when you clock in</small><input id="msg-clockIn" maxlength="80" autocomplete="off"></label>
             <label class="mrow">Clock out<small>Copied when you clock out</small><input id="msg-clockOut" maxlength="80" autocomplete="off"></label>
@@ -480,6 +483,7 @@
             <label class="mrow">End break<small>Copied when you end your break</small><input id="msg-breakEnd" maxlength="80" autocomplete="off"></label>
             <label class="mrow">Start lunch<small>Copied when you start your lunch</small><input id="msg-lunchStart" maxlength="80" autocomplete="off"></label>
             <label class="mrow">End lunch<small>Copied when you end your lunch</small><input id="msg-lunchEnd" maxlength="80" autocomplete="off"></label>
+            <button class="msave" id="msgSave" type="button" disabled>Save messages</button>
             <button class="sample" id="msgReset" type="button">Reset to defaults</button>
           </div>
         </div>
@@ -1121,29 +1125,38 @@
   let chatLines = {};
   try { chatLines = JSON.parse(localStorage.getItem('bpotime:chatlines') || '{}') || {}; } catch (e) { /* storage blocked: defaults */ }
   const sendChat = () => { if (window.bpoTime) window.bpoTime.setChatMessages(chatLines); };
-  for (const k of Object.keys(CHAT_DEFAULT)) {
+  const keys = Object.keys(CHAT_DEFAULT);
+  // What is typed in the boxes counts only once Save is pressed; leaving without saving puts the saved wording back.
+  const typed = () => { const o = {}; for (const k of keys) { const v = $('msg-' + k).value.trim(); if (v) o[k] = v; } return o; };
+  const isDirty = () => JSON.stringify(typed()) !== JSON.stringify(chatLines);
+  const paintSave = () => { $('msgSave').disabled = !isDirty(); };
+  const fillBoxes = () => { for (const k of keys) $('msg-' + k).value = chatLines[k] || ''; paintSave(); };
+  const saveChat = () => {
+    chatLines = typed();
+    try { localStorage.setItem('bpotime:chatlines', JSON.stringify(chatLines)); } catch (e) { /* not remembered */ }
+    sendChat(); paintSave();
+    toast('Saved. BPO Time will copy your messages from now on.');
+  };
+  for (const k of keys) {
     const input = $('msg-' + k);
     input.placeholder = CHAT_DEFAULT[k];
     // The panel is not focusable until asked, so a click alone never focuses the box: ask first, then focus it.
-    input.onchange = () => toast('Saved. BPO Time will copy this next time.');
-    input.onkeydown = e => { if (e.key === 'Enter') input.blur(); };
     input.onmousedown = () => { if (window.bpoTime && document.activeElement !== input) { window.bpoTime.setTyping(true); setTimeout(() => input.focus(), 60); } };
-    input.value = chatLines[k] || '';
-    input.oninput = () => {
-      const v = input.value.trim();
-      if (v) chatLines[k] = v; else delete chatLines[k];
-      try { localStorage.setItem('bpotime:chatlines', JSON.stringify(chatLines)); } catch (e) { /* not remembered */ }
-      sendChat();
-    };
+    input.onkeydown = e => { if (e.key === 'Enter' && !$('msgSave').disabled) saveChat(); };
+    input.oninput = paintSave;
   }
+  fillBoxes();
   sendChat();
-  $('msgBtn').onclick = () => showSettings(true, true);
-  $('messagesBack').onclick = () => showSettings(true);
+  $('msgBtn').onclick = () => { fillBoxes(); showSettings(true, true); };
+  $('msgSave').onclick = saveChat;
+  $('messagesBack').onclick = () => {
+    if (isDirty()) toast('Not saved. Press Save messages first to keep your changes.', true);
+    fillBoxes(); showSettings(true);
+  };
   $('msgReset').onclick = () => {
     chatLines = {};
-    for (const k of Object.keys(CHAT_DEFAULT)) $('msg-' + k).value = '';
     try { localStorage.removeItem('bpotime:chatlines'); } catch (e) { /* nothing to clear */ }
-    sendChat(); toast('The chat messages are back to the defaults.');
+    fillBoxes(); sendChat(); toast('The chat messages are back to the defaults.');
   };
   // Keep the panel in front during breaks: on unless switched off. Remembered on this PC and told to the app.
   let frontOn = true;
