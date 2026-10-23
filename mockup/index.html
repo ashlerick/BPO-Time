@@ -279,6 +279,8 @@
   .sbox .srow b { font-size: 13.5px; color: var(--ink); }
   .sbox .srow small { margin-top: 3px; font-size: 11.5px; color: var(--muted); opacity: .9; }
   .mrow { display: block; padding: 9px 12px; font-size: 11.5px; color: var(--muted); }
+  .mintro { margin: 0 4px 8px; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+  .mrow small { display: block; margin-top: 2px; font-size: 11px; opacity: .85; }
   .mrow + .mrow { border-top: 1px solid var(--line); }
   .mrow input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; font-size: 13px; color: var(--ink); background: var(--raise); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; }
   .mrow input:focus-visible { outline: 2px solid var(--brand-hi); outline-offset: 1px; }
@@ -470,13 +472,14 @@
         <div id="menuMessages" hidden>
           <button class="item back" id="messagesBack" type="button">&#8592; Settings</button>
           <div class="sgroup">Chat messages</div>
+          <p class="mintro">BPO Time copies these for you when you clock in or out or take a break. Paste them into your chat with Ctrl + V.</p>
           <div class="sbox mrows">
-            <label class="mrow">Clock in<input id="msg-clockIn" maxlength="80" autocomplete="off"></label>
-            <label class="mrow">Clock out<input id="msg-clockOut" maxlength="80" autocomplete="off"></label>
-            <label class="mrow">Start break<input id="msg-breakStart" maxlength="80" autocomplete="off"></label>
-            <label class="mrow">End break<input id="msg-breakEnd" maxlength="80" autocomplete="off"></label>
-            <label class="mrow">Start lunch<input id="msg-lunchStart" maxlength="80" autocomplete="off"></label>
-            <label class="mrow">End lunch<input id="msg-lunchEnd" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">Clock in<small>Copied when you clock in</small><input id="msg-clockIn" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">Clock out<small>Copied when you clock out</small><input id="msg-clockOut" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">Start break<small>Copied when you start your break</small><input id="msg-breakStart" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">End break<small>Copied when you end your break</small><input id="msg-breakEnd" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">Start lunch<small>Copied when you start your lunch</small><input id="msg-lunchStart" maxlength="80" autocomplete="off"></label>
+            <label class="mrow">End lunch<small>Copied when you end your lunch</small><input id="msg-lunchEnd" maxlength="80" autocomplete="off"></label>
             <button class="sample" id="msgReset" type="button">Reset to defaults</button>
           </div>
         </div>
