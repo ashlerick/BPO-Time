@@ -183,8 +183,24 @@ function raise(): void {
 
 // "Show desktop" (Win+D or the corner button) lifts the desktop above every window, which would cover the
 // panel. Put the panel back above it while that lasts, then back to the bottom when the apps return.
+// Typing in a panel text box: the panel is focus-free, so it takes focus only while someone types, and gives it up when it loses it
+// (a short wait first, because turning focus on makes Windows blur and refocus the window for a moment).
+let typing = false;
+function startTyping(): void {
+  if (!win || typing) return;
+  typing = true;
+  win.setFocusable(true);
+  win.focus();
+}
+function stopTyping(): void {
+  if (!win || !typing) return;
+  typing = false;
+  win.setFocusable(false);
+  if (!stayOnTop) sendToBottom(hwnd);
+}
+
 function keepAboveShownDesktop(): void {
-  if (!win || win.isDestroyed() || !shown) return;
+  if (!win || win.isDestroyed() || !shown || typing) return;
   const s = desktopState(hwnd);
   if (s.desktopOnTop && s.panelBelowDesktop) {
     // A plain raise cannot beat the desktop while it is lifted; always-on-top can.
@@ -249,6 +265,11 @@ function createWindow(): void {
   hwnd = Number(win.getNativeWindowHandle().readBigUInt64LE(0));
   place();
   win.once("ready-to-show", () => sendToBottom(hwnd));
+  win.on("blur", () => {
+    setTimeout(() => {
+      if (typing && win && !win.isDestroyed() && !win.isFocused()) stopTyping();
+    }, 400);
+  });
   win.on("minimize", () => {
     // Win+D (Show desktop) minimizes every window; the panel stays. Our own minimize uses hide().
     win?.showInactive();
@@ -338,10 +359,8 @@ app.whenReady().then(() => {
   // The panel never takes keyboard focus (so clicking it doesn't pull it above your work), which also means nothing can be typed in it.
   // While a text box in the panel is being used it can take focus; when the box is left, it goes back to being focus-free and to the bottom.
   ipcMain.on("typing:set", (_e, on: unknown) => {
-    if (!win) return;
-    win.setFocusable(on === true);
-    if (on === true) win.focus();
-    else if (!stayOnTop) sendToBottom(hwnd);
+    if (on === true) startTyping();
+    else stopTyping();
   });
   ipcMain.on("chat:set", (_e, lines: unknown) => {
     const next = { ...DEFAULT_CHAT };
